@@ -16,6 +16,18 @@ function showScreen(screenName, action = null) {
         }
     });
     
+    // Обновляем активность кнопки "Партнер – Чайхана"
+    const partnerNameBtn = document.querySelector('.brand-partner-name[data-page="home"]');
+    if (partnerNameBtn) {
+        if (screenName === 'home') {
+            partnerNameBtn.style.opacity = '1';
+            partnerNameBtn.style.transform = 'scale(1.05)';
+        } else {
+            partnerNameBtn.style.opacity = '0.9';
+            partnerNameBtn.style.transform = 'scale(1)';
+        }
+    }
+    
     // Показываем нужный экран
     currentScreen = screenName;
     
@@ -104,6 +116,12 @@ function checkDashboardPassword() {
 function renderTable() {
     console.log('Отрисовка таблицы...');
     
+    // Убеждаемся, что данные объединены
+    if (Object.keys(mergedData).length === 0 && allPayments.length > 0) {
+        console.log('Данные не объединены, выполняю слияние...');
+        mergeDataByPhone();
+    }
+    
     if (!elements.tableBody) {
         console.error('Элемент tableBody не найден');
         return;
@@ -140,6 +158,16 @@ function renderTable() {
         const normalizedPhone = normalizePhone(payment.phone);
         const docData = mergedData[normalizedPhone];
         const docForStatus = docData && docData.documents ? docData.documents : null;
+        
+        // Отладочная информация (только для первых нескольких записей)
+        if (pagePayments.indexOf(payment) < 3) {
+            console.log(`Платеж: ${payment.employee}, телефон: ${payment.phone}, нормализованный: ${normalizedPhone}`);
+            console.log(`  Найдены документы:`, !!docForStatus);
+            if (docForStatus) {
+                console.log(`  Статус документов:`, docForStatus.realStatus || docForStatus.documentStatus);
+            }
+        }
+        
         const docStatusIndicator = getDocumentStatusIndicator(docForStatus);
         
         tableHTML += `
@@ -191,19 +219,22 @@ function getDocumentStatusIndicator(doc) {
         }
         
         // Определяем класс и иконку в зависимости от статуса
+        // ВАЖНО: сначала проверяем "на оформлении", потом "оформлен", чтобы не перехватить неправильно
         let statusClass = 'status-partial';
         let icon = 'fa-exclamation-circle';
         
-        if (status.toLowerCase().includes('оформлен')) {
-            statusClass = 'status-ok';
-            icon = 'fa-check-circle';
-        } else if (status.toLowerCase().includes('уволен')) {
-            statusClass = 'status-error';
-            icon = 'fa-times-circle';
-        } else if (status.toLowerCase().includes('на оформлении')) {
+        const statusLower = status.toLowerCase();
+        
+        if (statusLower.includes('на оформлении')) {
             statusClass = 'status-warning';
             icon = 'fa-clock';
-        } else if (status.toLowerCase().includes('обработке') || status.toLowerCase().includes('обновлено')) {
+        } else if (statusLower.includes('уволен')) {
+            statusClass = 'status-error';
+            icon = 'fa-times-circle';
+        } else if (statusLower.includes('оформлен') && !statusLower.includes('на оформлении')) {
+            statusClass = 'status-ok';
+            icon = 'fa-check-circle';
+        } else if (statusLower.includes('обработке') || statusLower.includes('обновлено')) {
             statusClass = 'status-partial';
             icon = 'fa-clock';
         }
