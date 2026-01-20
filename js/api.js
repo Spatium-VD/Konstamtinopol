@@ -112,6 +112,9 @@ function processLoadedData(result) {
             // Заполняем фильтры
             populateFilters(allPayments);
             
+            // Слияние данных по телефону ДО применения фильтров
+            mergeDataByPhone();
+            
             // Применяем фильтры и отображаем данные
             applyFilters();
             
@@ -193,6 +196,14 @@ function processLoadedData(result) {
             // Обновляем фильтры документов
             updateDocumentFilters();
             
+            // Пересобираем объединенные данные после загрузки документов
+            mergeDataByPhone();
+            
+            // Перерисовываем таблицу выплат, если она открыта
+            if (currentScreen === 'payments' && filteredPayments.length > 0) {
+                renderTable();
+            }
+            
             // Применяем фильтры документов
             applyDocFilters();
             
@@ -249,9 +260,11 @@ function processLoadedData(result) {
         }
     }
     
-    // Слияние данных по телефону
+    // Слияние данных по телефону (если еще не было выполнено)
     try {
-        mergeDataByPhone();
+        if (Object.keys(mergedData).length === 0) {
+            mergeDataByPhone();
+        }
     } catch (error) {
         console.error('Ошибка при слиянии данных:', error);
     }
