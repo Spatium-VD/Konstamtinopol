@@ -70,12 +70,13 @@ body {
     color: var(--black);
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
+    flex: 1;
 }
 
 .nav-brand i,
 .nav-brand .brand-logo {
-    margin-right: 10px;
+    margin-right: 0;
     flex-shrink: 0;
 }
 
@@ -85,14 +86,31 @@ body {
     object-fit: contain;
 }
 
+.brand-company-name {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--gray-700);
+    white-space: nowrap;
+}
+
 .brand-partner-name {
     background: var(--primary);
     color: white;
     padding: 4px 12px;
     border-radius: 6px;
-    font-size: 16px;
+    font-size: 14px;
     font-weight: 600;
-    margin-left: 8px;
+    white-space: nowrap;
+    margin-left: auto;
+    text-decoration: none;
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.brand-partner-name:hover {
+    background: var(--primary-light);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-md);
 }
 
 .nav-links {
@@ -498,6 +516,12 @@ body {
 }
 
 .doc-status-indicator.status-partial {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--primary);
+    border: 1px solid rgba(59, 130, 246, 0.2);
+}
+
+.doc-status-indicator.status-warning {
     background: rgba(245, 158, 11, 0.1);
     color: var(--warning);
     border: 1px solid rgba(245, 158, 11, 0.2);
