@@ -58,6 +58,7 @@ function initializeDOMElements() {
     // Навигация
     elements.navLinks = document.querySelectorAll('.nav-link');
     elements.quickActionBtns = document.querySelectorAll('.quick-action-btn');
+    elements.partnerNameBtn = document.querySelector('.brand-partner-name[data-page="home"]');
     
     // Фильтры
     elements.yearFilter = document.getElementById('year-filter');
@@ -149,9 +150,23 @@ function setupEventListeners() {
         });
     });
     
+    // Обработчик для кнопки "Партнер – Чайхана" в навигации
+    const partnerNameBtn = document.querySelector('.brand-partner-name[data-page="home"]');
+    if (partnerNameBtn) {
+        partnerNameBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            showScreen('home');
+        });
+    }
+    
     // Быстрые действия
     elements.quickActionBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
+            // Если это внешняя ссылка (например, Telegram), не перехватываем клик
+            if (btn.hasAttribute('href') && btn.getAttribute('href').startsWith('http')) {
+                return; // Позволяем браузеру обработать ссылку
+            }
+            
             e.preventDefault();
             const page = btn.getAttribute('data-page');
             const action = btn.getAttribute('data-action');
