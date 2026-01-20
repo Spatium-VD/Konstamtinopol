@@ -443,13 +443,9 @@ function applyDocFilters() {
             // Для фильтра "Уволен" (not-processed) проверяем реальный статус из таблицы
             if (selectedStatus === 'not-processed') {
                 const realStatus = (d.realStatus || '').toLowerCase().trim();
-                // Уволен = статус содержит "уволен" или нет статуса "оформлен" и нет статуса "на оформлении"
-                return realStatus.includes('уволен') || 
-                       (!realStatus.includes('оформлен') && 
-                        !realStatus.includes('на оформлении') && 
-                        !realStatus.includes('обработке') &&
-                        !realStatus.includes('обновлено') &&
-                        realStatus !== '');
+                const hasDismissedDate = d.dismissedDate && d.dismissedDate.toString().trim() !== '';
+                // Уволен = статус содержит "уволен" ИЛИ есть дата увольнения
+                return realStatus.includes('уволен') || hasDismissedDate;
             }
             // Для других фильтров используем documentStatus
             return d.documentStatus === selectedStatus;
