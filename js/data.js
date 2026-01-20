@@ -32,6 +32,17 @@ function mergeDataByPhone() {
     });
     
     console.log('Объединено записей:', Object.keys(mergedData).length);
+    console.log('Выплат:', allPayments.length, 'Документов:', allDocuments.length);
+    
+    // Отладочная информация: проверяем несколько примеров
+    const samplePhones = Object.keys(mergedData).slice(0, 3);
+    samplePhones.forEach(phone => {
+        const data = mergedData[phone];
+        console.log(`Телефон ${phone}: выплат=${data.payments.length}, документов=${data.documents ? 'есть' : 'нет'}`);
+        if (data.documents) {
+            console.log(`  Статус: ${data.documents.realStatus || data.documents.documentStatus}`);
+        }
+    });
 }
 
 // Определение статуса документов
@@ -41,15 +52,30 @@ function getDocumentStatus(doc) {
         return 'not-processed';
     }
     
-    // Проверяем статус "Оформлен" в первой колонке
+    // Проверяем реальный статус из таблицы (collected или inProcess)
     const collected = (doc.collected || '').toString().toLowerCase().trim();
     const inProcess = (doc.inProcess || '').toString().toLowerCase().trim();
-    const isProcessed = collected.includes('оформлен') || inProcess.includes('оформлен');
+    const realStatus = collected || inProcess || '';
+    const realStatusLower = realStatus.toLowerCase();
     
-    if (isProcessed) {
-        return 'processed';
+    // Если есть реальный статус из таблицы, используем его
+    if (realStatus) {
+        if (realStatusLower.includes('оформлен') && !realStatusLower.includes('на оформлении')) {
+            return 'processed';
+        }
+        if (realStatusLower.includes('на оформлении') || realStatusLower.includes('обработке') || realStatusLower.includes('обновлено')) {
+            return 'partial';
+        }
+        if (realStatusLower.includes('уволен')) {
+            return 'not-processed';
+        }
+        // Если статус есть, но не "оформлен", считаем не оформленным
+        if (!realStatusLower.includes('оформлен')) {
+            return 'not-processed';
+        }
     }
     
+    // Если реального статуса нет, проверяем наличие документов
     const requiredDocs = {
         passport: !!(doc.passportData && doc.passportData.toString().trim()),
         registration: !!(doc.registrationEndDate && doc.registrationEndDate.toString().trim()),
@@ -74,13 +100,21 @@ function updateStatistics() {
         // Проверяем точное совпадение со словом "оформлен"
         return status === 'оформлен' || inProcessStatus === 'оформлен';
     }).length;
-    const totalWithDocs = allDocuments.length;
+    
+    // Общее количество БЕЗ уволенных (для расчета процента)
+    const totalWithoutDismissed = allDocuments.filter(d => {
+        const realStatus = (d.realStatus || '').toLowerCase().trim();
+        return !realStatus.includes('уволен');
+    }).length;
+    
     if (elements.statProcessedCount) {
         elements.statProcessedCount.textContent = processed;
     }
-    if (elements.statProcessedPercent && totalWithDocs > 0) {
-        const percent = Math.round((processed / totalWithDocs) * 100);
+    if (elements.statProcessedPercent && totalWithoutDismissed > 0) {
+        const percent = Math.round((processed / totalWithoutDismissed) * 100);
         elements.statProcessedPercent.textContent = `(${percent}%)`;
+    } else if (elements.statProcessedPercent) {
+        elements.statProcessedPercent.textContent = '(0%)';
     }
 }
 
@@ -405,7 +439,21 @@ function applyDocFilters() {
     // Фильтр по статусу
     const selectedStatus = elements.docStatusFilter ? elements.docStatusFilter.value : '';
     if (selectedStatus) {
-        filtered = filtered.filter(d => d.documentStatus === selectedStatus);
+        filtered = filtered.filter(d => {
+            // Для фильтра "Уволен" (not-processed) проверяем реальный статус из таблицы
+            if (selectedStatus === 'not-processed') {
+                const realStatus = (d.realStatus || '').toLowerCase().trim();
+                // Уволен = статус содержит "уволен" или нет статуса "оформлен" и нет статуса "на оформлении"
+                return realStatus.includes('уволен') || 
+                       (!realStatus.includes('оформлен') && 
+                        !realStatus.includes('на оформлении') && 
+                        !realStatus.includes('обработке') &&
+                        !realStatus.includes('обновлено') &&
+                        realStatus !== '');
+            }
+            // Для других фильтров используем documentStatus
+            return d.documentStatus === selectedStatus;
+        });
     }
     
     // Фильтр по должности
