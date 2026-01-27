@@ -366,11 +366,80 @@ function resetFilters() {
 }
 
 // Определение последнего периода
+/**
+ * Парсит период в формате "DD.MM-DD.MM" и возвращает последнее число периода
+ * @param {string} period - Период в формате "16.10-5.11" или "06.11-15.11"
+ * @returns {string|null} - Последнее число периода в формате "DD.MM" или null
+ */
+function parsePeriodEndDate(period) {
+    if (!period || typeof period !== 'string') return null;
+    
+    // Убираем пробелы и разбиваем по дефису
+    const parts = period.trim().split('-');
+    if (parts.length !== 2) return null;
+    
+    // Берем последнюю часть (последнее число периода)
+    const endDate = parts[1].trim();
+    
+    // Проверяем формат DD.MM
+    if (!endDate.match(/^\d{1,2}\.\d{1,2}$/)) return null;
+    
+    return endDate;
+}
+
+/**
+ * Создает объект Date из года и даты в формате "DD.MM"
+ * @param {number} year - Год (например, 2025)
+ * @param {string} dateStr - Дата в формате "DD.MM" (например, "5.11")
+ * @returns {Date|null} - Объект Date или null при ошибке
+ */
+function createDateFromYearAndPeriod(year, dateStr) {
+    if (!year || !dateStr) return null;
+    
+    const parts = dateStr.split('.');
+    if (parts.length !== 2) return null;
+    
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // Месяцы в JS начинаются с 0
+    
+    if (isNaN(day) || isNaN(month) || month < 0 || month > 11) return null;
+    
+    return new Date(year, month, day);
+}
+
+/**
+ * Определяет последний период выплаты на основе года и последнего числа периода
+ * @param {Array} payments - Массив выплат с полями year и period
+ * @returns {string} - Последний период (строка в формате "DD.MM-DD.MM")
+ */
 function getLastPeriod(payments) {
     if (!payments || payments.length === 0) return '';
     
-    // Используем предварительно вычисленные все периоды
-    return allPeriods.length > 0 ? allPeriods[0] : '';
+    let lastPeriod = null;
+    let lastDate = null;
+    
+    // Проходим по всем выплатам и находим период с максимальной датой окончания
+    payments.forEach(payment => {
+        if (!payment.period || !payment.year) return;
+        
+        // Парсим последнее число периода
+        const endDateStr = parsePeriodEndDate(payment.period);
+        if (!endDateStr) return;
+        
+        // Создаем дату из года и последнего числа периода
+        const periodEndDate = createDateFromYearAndPeriod(payment.year, endDateStr);
+        if (!periodEndDate) return;
+        
+        // Если это первый период или дата больше текущей максимальной
+        if (!lastDate || periodEndDate > lastDate) {
+            lastDate = periodEndDate;
+            lastPeriod = payment.period;
+        }
+    });
+    
+    console.log('Определен последний период:', lastPeriod, 'с датой окончания:', lastDate);
+    
+    return lastPeriod || '';
 }
 
 // Сортировка выплат
