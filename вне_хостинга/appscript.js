@@ -245,34 +245,36 @@ function doGet(e) {
     if (accountsSheet) {
       var accountsValues = accountsSheet.getDataRange().getValues();
       
-      // НОВАЯ СТРУКТУРА:
-      // A-H: Контроль счетов
-      //   A (0): Период
-      //   B (1): Месяц
-      //   C (2): ФОТ
-      //   D (3): Выручка
-      //   E (4): Оплачено Чайханой
-      //   F (5): Разница
-      //   G (6): Статус
-      //   H (7): Комментарий
+      // ОБНОВЛЕННАЯ СТРУКТУРА (добавлена колонка "Год"):
+      // A-I: Контроль счетов
+      //   A (0): Год ⭐ НОВОЕ
+      //   B (1): Период
+      //   C (2): Месяц
+      //   D (3): ФОТ
+      //   E (4): Выручка
+      //   F (5): Оплачено
+      //   G (6): Разница
+      //   H (7): Статус
+      //   I (8): Комментарий
       // J-K: Суммы
       //   J (9): Сумма (может быть заголовком или значением)
       //   K (10): К оплате / Оплачено / Разница
-      // L-N: История оплат
-      //   L (11): Лицо
-      //   M (12): Дата
-      //   N (13): Сумма
-      // P-Z: Транспонированная таблица разбивки счетов
-      //   P (15): Разбивки (заголовок)
-      //   Q-Z (16-25): Названия лиц/сумм
+      // M-O: История оплат
+      //   M (12): Лицо ⭐ СМЕСТИЛОСЬ
+      //   N (13): Дата ⭐ СМЕСТИЛОСЬ
+      //   O (14): Сумма ⭐ СМЕСТИЛОСЬ
+      // Q-AA: Транспонированная таблица разбивки счетов
+      //   Q (16): Разбивки (заголовок) ⭐ СМЕСТИЛОСЬ
+      //   R-AA (17-26): Названия лиц/сумм ⭐ СМЕСТИЛОСЬ
       
-      // Обрабатываем данные выплат (A-H)
+      // Обрабатываем данные выплат (A-I)
       for (var i = 1; i < accountsValues.length; i++) {
         var row = accountsValues[i];
         
-        var period = String(row[0] || '').trim();
+        var year = parseInt(row[0]) || new Date().getFullYear(); // A (0) - Год ⭐ НОВОЕ
+        var period = String(row[1] || '').trim(); // B (1) - Период ⭐ СМЕСТИЛОСЬ
         
-        // Пропускаем пустые строки
+        // Пропускаем пустые строки (проверяем период)
         if (!period || period === '') {
           continue;
         }
@@ -283,15 +285,16 @@ function doGet(e) {
           continue;
         }
         
-        var month = String(row[1] || '').trim();
-        var fot = parseFloat(row[2]) || 0;
-        var revenue = parseFloat(row[3]) || 0;
-        var paid = parseFloat(row[4]) || 0;
-        var difference = parseFloat(row[5]) || 0;
-        var status = String(row[6] || '').trim();
-        var comment = String(row[7] || '').trim();
+        var month = String(row[2] || '').trim(); // C (2) - Месяц ⭐ СМЕСТИЛОСЬ
+        var fot = parseFloat(row[3]) || 0; // D (3) - ФОТ ⭐ СМЕСТИЛОСЬ
+        var revenue = parseFloat(row[4]) || 0; // E (4) - Выручка ⭐ СМЕСТИЛОСЬ
+        var paid = parseFloat(row[5]) || 0; // F (5) - Оплачено ⭐ СМЕСТИЛОСЬ
+        var difference = parseFloat(row[6]) || 0; // G (6) - Разница ⭐ СМЕСТИЛОСЬ
+        var status = String(row[7] || '').trim(); // H (7) - Статус ⭐ СМЕСТИЛОСЬ
+        var comment = String(row[8] || '').trim(); // I (8) - Комментарий ⭐ СМЕСТИЛОСЬ
         
         accountsData.payments.push({
+          year: year, // ⭐ ДОБАВЛЕНО: Год
           period: period,
           month: month,
           fot: fot,
@@ -303,13 +306,13 @@ function doGet(e) {
         });
       }
       
-      // Обрабатываем историю оплат (L-N)
+      // Обрабатываем историю оплат (M-O)
       for (var i = 1; i < accountsValues.length; i++) {
         var row = accountsValues[i];
         
-        var accountName = row[11] ? String(row[11]).trim() : ''; // L - Лицо
-        var dateValue = row[12]; // M - Дата
-        var amountValue = row[13]; // N - Сумма
+        var accountName = row[12] ? String(row[12]).trim() : ''; // M (12) - Лицо ⭐ СМЕСТИЛОСЬ
+        var dateValue = row[13]; // N (13) - Дата ⭐ СМЕСТИЛОСЬ
+        var amountValue = row[14]; // O (14) - Сумма ⭐ СМЕСТИЛОСЬ
         
         // Пропускаем если нет суммы
         if (!amountValue || amountValue === '') {
@@ -354,14 +357,14 @@ function doGet(e) {
         }
       }
       
-      // Обрабатываем разбивку счетов (P-Z транспонированная)
-      // Заголовок в P (15), данные в Q-Z (16-25)
+      // Обрабатываем разбивку счетов (Q-AA транспонированная)
+      // Заголовок в Q (16), данные в R-AA (17-26) ⭐ СМЕСТИЛОСЬ
       if (accountsValues.length > 0) {
         var headerRow = accountsValues[0];
         var breakdownHeaders = [];
         
-        // Собираем заголовки из Q-Z (16-25)
-        for (var col = 16; col <= 25 && col < headerRow.length; col++) {
+        // Собираем заголовки из R-AA (17-26) ⭐ СМЕСТИЛОСЬ
+        for (var col = 17; col <= 26 && col < headerRow.length; col++) {
           var header = String(headerRow[col] || '').trim();
           if (header) {
             breakdownHeaders.push({ index: col, name: header });
@@ -371,7 +374,7 @@ function doGet(e) {
         // Обрабатываем данные разбивки (начиная со строки 1)
         for (var i = 1; i < accountsValues.length; i++) {
           var row = accountsValues[i];
-          var periodValue = String(row[15] || '').trim(); // P (15) - период разбивки
+          var periodValue = String(row[16] || '').trim(); // Q (16) - период разбивки ⭐ СМЕСТИЛОСЬ
           
           if (!periodValue || periodValue === '') continue;
           
