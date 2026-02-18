@@ -116,3 +116,67 @@ function debounce(func, wait) {
         timeout = setTimeout(later, wait);
     };
 }
+
+// Функция логирования для отладки
+function logEvent(location, message, data = {}) {
+    try {
+        const logEntry = {
+            timestamp: new Date().toISOString(),
+            location: location,
+            message: message,
+            data: data,
+            userAgent: navigator.userAgent,
+            url: window.location.href
+        };
+        
+        // Сохраняем в localStorage
+        const logs = JSON.parse(localStorage.getItem('app_logs') || '[]');
+        logs.push(logEntry);
+        
+        // Храним только последние 1000 записей
+        if (logs.length > 1000) {
+            logs.shift();
+        }
+        
+        localStorage.setItem('app_logs', JSON.stringify(logs));
+        
+        // Также выводим в консоль для удобства
+        console.log(`[LOG] ${location}: ${message}`, data);
+    } catch (e) {
+        console.error('Ошибка при логировании:', e);
+    }
+}
+
+// Функция для получения логов (для отладки)
+function getLogs() {
+    try {
+        return JSON.parse(localStorage.getItem('app_logs') || '[]');
+    } catch (e) {
+        return [];
+    }
+}
+
+// Функция для очистки логов
+function clearLogs() {
+    localStorage.removeItem('app_logs');
+    console.log('Логи очищены');
+}
+
+// Функция для экспорта логов в JSON (для удобного просмотра)
+function exportLogs() {
+    const logs = getLogs();
+    const json = JSON.stringify(logs, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `logs_${new Date().toISOString().slice(0, 10)}.json`);
+    link.click();
+    URL.revokeObjectURL(url);
+    console.log('Логи экспортированы, записей:', logs.length);
+}
+
+// Делаем функции доступными в консоли браузера для отладки
+window.getLogs = getLogs;
+window.clearLogs = clearLogs;
+window.exportLogs = exportLogs;

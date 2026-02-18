@@ -257,20 +257,35 @@ function populateFilters(payments) {
 
 // Применение фильтров
 function applyFilters() {
+    const startTime = performance.now();
     console.log('Применение фильтров...');
+    
+    // Логируем начало применения фильтров
+    logEvent('data.js:applyFilters', 'Начало применения фильтров', {
+        totalPayments: allPayments.length,
+        currentMode: currentMode
+    });
     
     // Сбрасываем специальные режимы
     exitMode();
     
     // Применяем фильтры
     let filtered = [...allPayments];
+    const initialCount = filtered.length;
     
     // ⭐ КОМБИНИРОВАННЫЙ ФИЛЬТР: Год + Период
     const selectedPeriodYear = elements.periodYearFilter ? elements.periodYearFilter.value : '';
     if (selectedPeriodYear) {
         const [selectedYear, selectedPeriod] = selectedPeriodYear.split('|');
         if (selectedYear && selectedPeriod) {
+            const beforeFilter = filtered.length;
             filtered = filtered.filter(p => p.year == selectedYear && p.period === selectedPeriod);
+            logEvent('data.js:applyFilters', 'Фильтр по периоду применен', {
+                selectedYear: selectedYear,
+                selectedPeriod: selectedPeriod,
+                beforeFilter: beforeFilter,
+                afterFilter: filtered.length
+            });
             if (elements.periodInfo) {
                 elements.periodInfo.textContent = `Период: ${selectedYear} ${selectedPeriod}`;
             }
@@ -284,42 +299,89 @@ function applyFilters() {
     // Фильтр по статусу
     const selectedStatus = elements.statusFilter ? elements.statusFilter.value : '';
     if (selectedStatus) {
+        const beforeFilter = filtered.length;
         filtered = filtered.filter(p => p.status === selectedStatus);
+        logEvent('data.js:applyFilters', 'Фильтр по статусу применен', {
+            selectedStatus: selectedStatus,
+            beforeFilter: beforeFilter,
+            afterFilter: filtered.length
+        });
     }
     
     // Фильтр по поиску
     const searchTerm = elements.searchInput ? elements.searchInput.value.toLowerCase() : '';
     if (searchTerm) {
+        const beforeFilter = filtered.length;
         filtered = filtered.filter(p => 
             p.employee.toLowerCase().includes(searchTerm) || 
             p.phone.includes(searchTerm)
         );
+        logEvent('data.js:applyFilters', 'Фильтр по поиску применен', {
+            searchTerm: searchTerm,
+            beforeFilter: beforeFilter,
+            afterFilter: filtered.length
+        });
     }
     
     filteredPayments = filtered;
     currentPage = 1;
     
+    const filterTime = performance.now() - startTime;
+    
     // Сортировка
+    const sortStartTime = performance.now();
     sortPayments();
+    const sortTime = performance.now() - sortStartTime;
     
     // Отображение
+    const renderStartTime = performance.now();
     renderTable();
     updatePagination();
+    const renderTime = performance.now() - renderStartTime;
     
-    console.log('Фильтры применены, записей:', filteredPayments.length);
+    const totalTime = performance.now() - startTime;
+    
+    // Логируем результат
+    logEvent('data.js:applyFilters', 'Фильтры применены', {
+        initialCount: initialCount,
+        finalCount: filteredPayments.length,
+        selectedPeriodYear: selectedPeriodYear,
+        selectedStatus: selectedStatus,
+        searchTerm: searchTerm,
+        filterTime: filterTime.toFixed(2) + 'ms',
+        sortTime: sortTime.toFixed(2) + 'ms',
+        renderTime: renderTime.toFixed(2) + 'ms',
+        totalTime: totalTime.toFixed(2) + 'ms'
+    });
+    
+    console.log('Фильтры применены, записей:', filteredPayments.length, `(время: ${totalTime.toFixed(2)}ms)`);
 }
 
 // Режим: Последний период (все выплаты)
 function showLastPeriod() {
+    const startTime = performance.now();
     console.log('Показать последний период');
     
+    logEvent('data.js:showLastPeriod', 'Нажата кнопка "Последний период"', {
+        allPaymentsCount: allPayments.length
+    });
+    
     // Получаем последний период и год
+    const periodStartTime = performance.now();
     const lastPeriodData = getLastPeriodAndYear(allPayments);
+    const periodTime = performance.now() - periodStartTime;
     
     if (!lastPeriodData) {
+        logEvent('data.js:showLastPeriod', 'Ошибка: нет данных о последнем периоде', {});
         console.log('Нет данных о последнем периоде');
         return;
     }
+    
+    logEvent('data.js:showLastPeriod', 'Последний период определен', {
+        year: lastPeriodData.year,
+        period: lastPeriodData.period,
+        periodTime: periodTime.toFixed(2) + 'ms'
+    });
     
     currentMode = 'last-period';
     
@@ -334,31 +396,64 @@ function showLastPeriod() {
     }
     
     // Применяем фильтры
+    const filterStartTime = performance.now();
     applyFilters();
+    const filterTime = performance.now() - filterStartTime;
     
     // Показываем индикатор режима
     showModeIndicator(`Показаны <strong>все выплаты</strong> за последний период: <strong>${lastPeriodData.year} ${lastPeriodData.period}</strong>`);
     
     // Обновляем интерфейс
     currentPage = 1;
+    const sortStartTime = performance.now();
     sortPayments();
+    const sortTime = performance.now() - sortStartTime;
+    
+    const renderStartTime = performance.now();
     renderTable();
     updatePagination();
+    const renderTime = performance.now() - renderStartTime;
     
-    console.log('Показано записей последнего периода:', filteredPayments.length);
+    const totalTime = performance.now() - startTime;
+    
+    logEvent('data.js:showLastPeriod', 'Режим "Последний период" активирован', {
+        year: lastPeriodData.year,
+        period: lastPeriodData.period,
+        resultCount: filteredPayments.length,
+        filterTime: filterTime.toFixed(2) + 'ms',
+        sortTime: sortTime.toFixed(2) + 'ms',
+        renderTime: renderTime.toFixed(2) + 'ms',
+        totalTime: totalTime.toFixed(2) + 'ms'
+    });
+    
+    console.log('Показано записей последнего периода:', filteredPayments.length, `(время: ${totalTime.toFixed(2)}ms)`);
 }
 
 // Режим: Неоплаченные в последнем периоде
 function showLastUnpaid() {
+    const startTime = performance.now();
     console.log('Показать неоплаченные последнего периода');
     
+    logEvent('data.js:showLastUnpaid', 'Нажата кнопка "Неоплаченные"', {
+        allPaymentsCount: allPayments.length
+    });
+    
     // Получаем последний период и год
+    const periodStartTime = performance.now();
     const lastPeriodData = getLastPeriodAndYear(allPayments);
+    const periodTime = performance.now() - periodStartTime;
     
     if (!lastPeriodData) {
+        logEvent('data.js:showLastUnpaid', 'Ошибка: нет данных о последнем периоде', {});
         console.log('Нет данных о последнем периоде');
         return;
     }
+    
+    logEvent('data.js:showLastUnpaid', 'Последний период определен', {
+        year: lastPeriodData.year,
+        period: lastPeriodData.period,
+        periodTime: periodTime.toFixed(2) + 'ms'
+    });
     
     currentMode = 'last-unpaid';
     
@@ -373,9 +468,12 @@ function showLastUnpaid() {
     }
     
     // Применяем фильтры
+    const filterStartTime = performance.now();
     applyFilters();
+    const filterTime = performance.now() - filterStartTime;
     
     // Показываем только НЕОПЛАЧЕННЫЕ записи последнего периода
+    const unpaidFilterStartTime = performance.now();
     const unpaidStatuses = allStatuses.filter(status =>
         !status.toLowerCase().includes('оплатили') && 
         !status.toLowerCase().includes('оплачено')
@@ -384,17 +482,43 @@ function showLastUnpaid() {
     filteredPayments = allPayments.filter(p => 
         p.period === lastPeriod && unpaidStatuses.includes(p.status)
     );
+    const unpaidFilterTime = performance.now() - unpaidFilterStartTime;
+    
+    logEvent('data.js:showLastUnpaid', 'Фильтр неоплаченных применен', {
+        unpaidStatusesCount: unpaidStatuses.length,
+        unpaidStatuses: unpaidStatuses,
+        resultCount: filteredPayments.length,
+        unpaidFilterTime: unpaidFilterTime.toFixed(2) + 'ms'
+    });
     
     // Показываем индикатор режима
     showModeIndicator(`Показаны <strong>неоплаченные выплаты</strong> за период: <strong>${lastPeriod}</strong>`);
     
     // Обновляем интерфейс
     currentPage = 1;
+    const sortStartTime = performance.now();
     sortPayments();
+    const sortTime = performance.now() - sortStartTime;
+    
+    const renderStartTime = performance.now();
     renderTable();
     updatePagination();
+    const renderTime = performance.now() - renderStartTime;
     
-    console.log('Показано неоплаченных записей:', filteredPayments.length);
+    const totalTime = performance.now() - startTime;
+    
+    logEvent('data.js:showLastUnpaid', 'Режим "Неоплаченные" активирован', {
+        year: lastPeriodData.year,
+        period: lastPeriodData.period,
+        resultCount: filteredPayments.length,
+        filterTime: filterTime.toFixed(2) + 'ms',
+        unpaidFilterTime: unpaidFilterTime.toFixed(2) + 'ms',
+        sortTime: sortTime.toFixed(2) + 'ms',
+        renderTime: renderTime.toFixed(2) + 'ms',
+        totalTime: totalTime.toFixed(2) + 'ms'
+    });
+    
+    console.log('Показано неоплаченных записей:', filteredPayments.length, `(время: ${totalTime.toFixed(2)}ms)`);
 }
 
 // Выход из специального режима

@@ -17,5 +17,6 @@ const CONFIG = {
     telegramUrl: 'https://t.me/',
     
     // Безопасность
-    dashboardPassword: '445566'
+    dashboardPassword: '445566',
+    platformPassword: '44' // Пароль для входа на платформу
 };

@@ -114,7 +114,13 @@ function checkDashboardPassword() {
 
 // Отображение таблицы выплат
 function renderTable() {
+    window.renderTableStartTime = performance.now();
     console.log('Отрисовка таблицы...');
+    
+    logEvent('ui.js:renderTable', 'Начало отрисовки таблицы', {
+        filteredPaymentsCount: filteredPayments.length,
+        currentPage: currentPage
+    });
     
     // Убеждаемся, что данные объединены
     if (Object.keys(mergedData).length === 0 && allPayments.length > 0) {
@@ -203,9 +209,15 @@ function renderTable() {
         });
     });
     
+    const renderTime = performance.now() - (window.renderTableStartTime || performance.now());
+    logEvent('ui.js:renderTable', 'Таблица отрисована', {
+        totalPayments: filteredPayments.length,
+        pagePayments: pagePayments.length,
+        currentPage: currentPage,
+        renderTime: renderTime.toFixed(2) + 'ms'
+    });
+    
     console.log('Таблица отрисована, записей:', filteredPayments.length);
-    console.log('На странице: с ИНН:', paymentsWithINN, 'без ИНН:', paymentsWithoutINN);
-    console.log('На странице: с документами:', paymentsWithDocs, 'без документов:', paymentsWithoutDocs);
 }
 
 // Индикатор статуса документов - показывает реальный статус из таблицы

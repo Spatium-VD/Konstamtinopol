@@ -27,6 +27,9 @@ const elements = {};
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => {
+    // Проверка пароля для доступа к платформе
+    checkPlatformPassword();
+    
     // Сначала инициализируем элементы DOM
     initializeDOMElements();
     
@@ -44,6 +47,31 @@ document.addEventListener('DOMContentLoaded', () => {
         loadData();
     }, CONFIG.refreshInterval);
 });
+
+// Проверка пароля для доступа к платформе
+function checkPlatformPassword() {
+    // Проверяем, был ли уже введен правильный пароль в этой сессии
+    const platformAccessGranted = sessionStorage.getItem('platformAccessGranted') === 'true';
+    
+    if (platformAccessGranted) {
+        // Доступ уже предоставлен
+        return;
+    }
+    
+    // Запрашиваем пароль
+    const password = prompt('Введите пароль для доступа к платформе:');
+    
+    if (password === CONFIG.platformPassword) {
+        // Пароль правильный, сохраняем доступ в сессии
+        sessionStorage.setItem('platformAccessGranted', 'true');
+    } else {
+        // Пароль неверный, блокируем доступ
+        alert('Неверный пароль. Доступ запрещен.');
+        // Перенаправляем на пустую страницу или показываем сообщение
+        document.body.innerHTML = '<div style="display: flex; justify-content: center; align-items: center; height: 100vh; font-size: 24px;">Доступ запрещен. Обновите страницу и введите правильный пароль.</div>';
+        throw new Error('Access denied');
+    }
+}
 
 // Инициализация элементов DOM
 function initializeDOMElements() {
