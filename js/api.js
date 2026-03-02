@@ -11,11 +11,15 @@ async function loadData() {
         showLoading();
         if (elements.docLoading) elements.docLoading.classList.remove('hidden');
         
-        const APPS_SCRIPT_URL = CONFIG.appsScriptUrl;
+        // При открытии как file:// запрос к /api/data не сработает — используем GAS напрямую для загрузки
+        let url = CONFIG.dataApiUrl || CONFIG.appsScriptUrl;
+        if (CONFIG.dataApiUrl && window.location.protocol === 'file:') {
+            url = CONFIG.appsScriptUrl;
+        }
         
-        console.log('Загрузка данных с:', APPS_SCRIPT_URL);
+        console.log('Загрузка данных с:', url);
         
-        const response = await fetch(APPS_SCRIPT_URL);
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error(`Ошибка HTTP: ${response.status}`);

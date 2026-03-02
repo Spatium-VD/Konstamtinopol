@@ -2,9 +2,10 @@
 // Конфигурация приложения
 
 const CONFIG = {
-    // API
+    // API (серверная версия: данные с локального сервера; иначе — напрямую с GAS)
+    dataApiUrl: '/api/data',
     appsScriptUrl: 'https://script.google.com/macros/s/AKfycby_22OoB_4A1EtQsOFQDPz4DQvcnmtWEWdwXCMgmoGoh9uGGhWVmdt5D8rcWG9qq9wjqg/exec',
-    // UI
+    // UI 
     itemsPerPage: 50,
     sortDirection: 'desc',
     sortField: 'period',

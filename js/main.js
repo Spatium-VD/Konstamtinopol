@@ -243,6 +243,38 @@ function setupEventListeners() {
     if (elements.backButton) elements.backButton.addEventListener('click', showMainScreen);
     if (elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCSV);
     
+    // Дашборд: обновить данные (серверная версия — запрос к серверу, затем перезагрузка)
+    const dashboardRefreshBtn = document.getElementById('dashboard-refresh-data');
+    if (dashboardRefreshBtn && CONFIG.dataApiUrl) {
+        dashboardRefreshBtn.addEventListener('click', async () => {
+            const btn = dashboardRefreshBtn;
+            const origText = btn.innerHTML;
+            // Серверная версия работает только при открытии через HTTP (localhost или деплой)
+            if (window.location.protocol === 'file:') {
+                alert('Серверная версия должна открываться через сервер.\nЗапустите: npm start\nи откройте в браузере: http://localhost:3000');
+                return;
+            }
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обновление…';
+            try {
+                const res = await fetch('/api/refresh', { method: 'POST' });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+                await loadData();
+                btn.innerHTML = '<i class="fas fa-check"></i> Готово';
+                setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000);
+            } catch (e) {
+                console.error('Ошибка обновления данных:', e);
+                const isNetworkError = e.message === 'Failed to fetch' || e.name === 'TypeError';
+                if (isNetworkError) {
+                    alert('Не удалось связаться с сервером. Убедитесь, что приложение открыто по адресу сервера (например http://localhost:3000), а не как файл.');
+                }
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Ошибка';
+                setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 3000);
+            }
+        });
+    }
+    
     // Сортировка таблицы
     document.querySelectorAll('#payments-table th[data-sort]').forEach(th => {
         th.addEventListener('click', () => {
