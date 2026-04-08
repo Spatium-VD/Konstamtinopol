@@ -386,7 +386,7 @@ function renderTransactionsTable() {
     }
     
     if (!accountsData || !accountsData.transactions || accountsData.transactions.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--gray-500);">Нет транзакций</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--ink-subtle);">Нет транзакций</td></tr>';
         if (toggleButton) toggleButton.style.display = 'none';
         if (totalSumEl) totalSumEl.textContent = '0 ₽';
         return;
