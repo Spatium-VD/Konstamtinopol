@@ -97,6 +97,26 @@ function mergeDataByINN() {
     });
 }
 
+function isDismissedDocument(doc) {
+    if (!doc || typeof doc !== 'object') {
+        return false;
+    }
+
+    const hasDismissedDate = !!(doc.dismissedDate && doc.dismissedDate.toString().trim());
+    const statusSources = [doc.realStatus, doc.collected, doc.inProcess];
+
+    return hasDismissedDate || statusSources.some(status =>
+        (status || '').toString().toLowerCase().includes('уволен')
+    );
+}
+
+const DOCUMENT_STATUS_OPTIONS = [
+    { value: 'processed', label: '✅ Оформлен' },
+    { value: 'partial', label: '⚠ Частично оформлен' },
+    { value: 'not-processed', label: '❌ Не оформлен' },
+    { value: 'dismissed', label: '🚫 Уволен' }
+];
+
 // Определение статуса документов
 function getDocumentStatus(doc) {
     // Проверяем что doc существует
@@ -109,22 +129,23 @@ function getDocumentStatus(doc) {
     const inProcess = (doc.inProcess || '').toString().toLowerCase().trim();
     const realStatus = collected || inProcess || '';
     const realStatusLower = realStatus.toLowerCase();
+
+    if (isDismissedDocument(doc)) {
+        return 'dismissed';
+    }
     
     // Если есть реальный статус из таблицы, используем его
     if (realStatus) {
-        if (realStatusLower.includes('оформлен') && !realStatusLower.includes('на оформлении')) {
-            return 'processed';
-        }
+        // На оформлении / в обработке — до проверки на "оформлен"
         if (realStatusLower.includes('на оформлении') || realStatusLower.includes('обработке') || realStatusLower.includes('обновлено')) {
             return 'partial';
         }
-        if (realStatusLower.includes('уволен')) {
-            return 'not-processed';
+        // Оформлен — только если не было исключений выше
+        if (realStatusLower.includes('оформлен')) {
+            return 'processed';
         }
-        // Если статус есть, но не "оформлен", считаем не оформленным
-        if (!realStatusLower.includes('оформлен')) {
-            return 'not-processed';
-        }
+        // Любой другой статус — не оформлен
+        return 'not-processed';
     }
     
     // Если реального статуса нет, проверяем наличие документов
@@ -383,36 +404,26 @@ function showLastPeriod() {
         periodTime: periodTime.toFixed(2) + 'ms'
     });
     
-    currentMode = 'last-period';
-    
     // Сбрасываем другие фильтры
     if (elements.statusFilter) elements.statusFilter.value = '';
     if (elements.searchInput) elements.searchInput.value = '';
     
-    // ⭐ УСТАНАВЛИВАЕМ ФИЛЬТР НА ПОСЛЕДНИЙ ГОД И ПЕРИОД
+    // Устанавливаем фильтр на последний год и период
     if (elements.periodYearFilter) {
         const filterValue = `${lastPeriodData.year}|${lastPeriodData.period}`;
         elements.periodYearFilter.value = filterValue;
     }
     
-    // Применяем фильтры
+    // Применяем фильтры (внутри вызывается exitMode, поэтому currentMode ставим ПОСЛЕ)
     const filterStartTime = performance.now();
     applyFilters();
     const filterTime = performance.now() - filterStartTime;
     
-    // Показываем индикатор режима
+    // Устанавливаем режим ПОСЛЕ applyFilters (иначе exitMode внутри сбросит его)
+    currentMode = 'last-period';
+    
+    // Показываем индикатор режима с подсветкой кнопки
     showModeIndicator(`Показаны <strong>все выплаты</strong> за последний период: <strong>${lastPeriodData.year} ${lastPeriodData.period}</strong>`);
-    
-    // Обновляем интерфейс
-    currentPage = 1;
-    const sortStartTime = performance.now();
-    sortPayments();
-    const sortTime = performance.now() - sortStartTime;
-    
-    const renderStartTime = performance.now();
-    renderTable();
-    updatePagination();
-    const renderTime = performance.now() - renderStartTime;
     
     const totalTime = performance.now() - startTime;
     
@@ -421,8 +432,6 @@ function showLastPeriod() {
         period: lastPeriodData.period,
         resultCount: filteredPayments.length,
         filterTime: filterTime.toFixed(2) + 'ms',
-        sortTime: sortTime.toFixed(2) + 'ms',
-        renderTime: renderTime.toFixed(2) + 'ms',
         totalTime: totalTime.toFixed(2) + 'ms'
     });
     
@@ -455,33 +464,30 @@ function showLastUnpaid() {
         periodTime: periodTime.toFixed(2) + 'ms'
     });
     
-    currentMode = 'last-unpaid';
-    
     // Сбрасываем другие фильтры
     if (elements.statusFilter) elements.statusFilter.value = '';
     if (elements.searchInput) elements.searchInput.value = '';
     
-    // ⭐ УСТАНАВЛИВАЕМ ФИЛЬТР НА ПОСЛЕДНИЙ ГОД И ПЕРИОД
+    // Устанавливаем фильтр на последний год и период
     if (elements.periodYearFilter) {
         const filterValue = `${lastPeriodData.year}|${lastPeriodData.period}`;
         elements.periodYearFilter.value = filterValue;
     }
     
-    // Применяем фильтры
+    // Применяем фильтры (filteredPayments теперь содержит только последний период/год)
     const filterStartTime = performance.now();
     applyFilters();
     const filterTime = performance.now() - filterStartTime;
     
-    // Показываем только НЕОПЛАЧЕННЫЕ записи последнего периода
+    // Дополнительно фильтруем только НЕОПЛАЧЕННЫЕ из уже отфильтрованного результата
     const unpaidFilterStartTime = performance.now();
     const unpaidStatuses = allStatuses.filter(status =>
         !status.toLowerCase().includes('оплатили') && 
         !status.toLowerCase().includes('оплачено')
     );
     
-    filteredPayments = allPayments.filter(p => 
-        p.period === lastPeriod && unpaidStatuses.includes(p.status)
-    );
+    // Фильтруем из filteredPayments (уже отфильтровано по периоду/году), а не из allPayments
+    filteredPayments = filteredPayments.filter(p => unpaidStatuses.includes(p.status));
     const unpaidFilterTime = performance.now() - unpaidFilterStartTime;
     
     logEvent('data.js:showLastUnpaid', 'Фильтр неоплаченных применен', {
@@ -491,19 +497,17 @@ function showLastUnpaid() {
         unpaidFilterTime: unpaidFilterTime.toFixed(2) + 'ms'
     });
     
-    // Показываем индикатор режима
-    showModeIndicator(`Показаны <strong>неоплаченные выплаты</strong> за период: <strong>${lastPeriod}</strong>`);
+    // Устанавливаем режим ПОСЛЕ applyFilters (иначе exitMode внутри сбросит его)
+    currentMode = 'last-unpaid';
     
-    // Обновляем интерфейс
+    // Показываем индикатор режима с подсветкой кнопки
+    showModeIndicator(`Показаны <strong>неоплаченные выплаты</strong> за период: <strong>${lastPeriodData.year} ${lastPeriodData.period}</strong>`);
+    
+    // Перерисовываем таблицу с обновлённым filteredPayments
     currentPage = 1;
-    const sortStartTime = performance.now();
     sortPayments();
-    const sortTime = performance.now() - sortStartTime;
-    
-    const renderStartTime = performance.now();
     renderTable();
     updatePagination();
-    const renderTime = performance.now() - renderStartTime;
     
     const totalTime = performance.now() - startTime;
     
@@ -513,8 +517,6 @@ function showLastUnpaid() {
         resultCount: filteredPayments.length,
         filterTime: filterTime.toFixed(2) + 'ms',
         unpaidFilterTime: unpaidFilterTime.toFixed(2) + 'ms',
-        sortTime: sortTime.toFixed(2) + 'ms',
-        renderTime: renderTime.toFixed(2) + 'ms',
         totalTime: totalTime.toFixed(2) + 'ms'
     });
     
@@ -564,50 +566,12 @@ function resetFilters() {
     
     exitMode();
     applyFilters();
+    
+    // Обновляем визуальное состояние фильтров
+    if (typeof updateFilterActiveStates === 'function') updateFilterActiveStates();
 }
 
 // Определение последнего периода
-/**
- * Парсит период в формате "DD.MM-DD.MM" и возвращает последнее число периода
- * @param {string} period - Период в формате "16.10-5.11" или "06.11-15.11"
- * @returns {string|null} - Последнее число периода в формате "DD.MM" или null
- */
-function parsePeriodEndDate(period) {
-    if (!period || typeof period !== 'string') return null;
-    
-    // Убираем пробелы и разбиваем по дефису
-    const parts = period.trim().split('-');
-    if (parts.length !== 2) return null;
-    
-    // Берем последнюю часть (последнее число периода)
-    const endDate = parts[1].trim();
-    
-    // Проверяем формат DD.MM
-    if (!endDate.match(/^\d{1,2}\.\d{1,2}$/)) return null;
-    
-    return endDate;
-}
-
-/**
- * Создает объект Date из года и даты в формате "DD.MM"
- * @param {number} year - Год (например, 2025)
- * @param {string} dateStr - Дата в формате "DD.MM" (например, "5.11")
- * @returns {Date|null} - Объект Date или null при ошибке
- */
-function createDateFromYearAndPeriod(year, dateStr) {
-    if (!year || !dateStr) return null;
-    
-    const parts = dateStr.split('.');
-    if (parts.length !== 2) return null;
-    
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // Месяцы в JS начинаются с 0
-    
-    if (isNaN(day) || isNaN(month) || month < 0 || month > 11) return null;
-    
-    return new Date(year, month, day);
-}
-
 /**
  * Определяет последний период выплаты на основе года и последнего числа периода
  * @param {Array} payments - Массив выплат с полями year и period
@@ -725,6 +689,10 @@ function sortPayments() {
 
 // Обновление фильтров документов
 function updateDocumentFilters() {
+    if (elements.docStatusFilter) {
+        populateSelectOptions(elements.docStatusFilter, DOCUMENT_STATUS_OPTIONS, 'Все статусы');
+    }
+
     // Должности
     const positions = [...new Set(allDocuments.map(d => d.position).filter(Boolean))].sort();
     if (elements.docPositionFilter) {
@@ -763,14 +731,16 @@ function applyDocFilters() {
     const selectedStatus = elements.docStatusFilter ? elements.docStatusFilter.value : '';
     if (selectedStatus) {
         filtered = filtered.filter(d => {
-            // Для фильтра "Уволен" (not-processed) проверяем реальный статус из таблицы
-            if (selectedStatus === 'not-processed') {
-                const realStatus = (d.realStatus || '').toLowerCase().trim();
-                const hasDismissedDate = d.dismissedDate && d.dismissedDate.toString().trim() !== '';
-                // Уволен = статус содержит "уволен" ИЛИ есть дата увольнения
-                return realStatus.includes('уволен') || hasDismissedDate;
+            const isDismissed = isDismissedDocument(d);
+
+            if (selectedStatus === 'dismissed') {
+                return isDismissed;
             }
-            // Для других фильтров используем documentStatus
+
+            if (selectedStatus === 'not-processed') {
+                return !isDismissed && d.documentStatus === 'not-processed';
+            }
+
             return d.documentStatus === selectedStatus;
         });
     }
@@ -825,6 +795,9 @@ function resetDocFilters() {
     if (elements.docSearchInput) elements.docSearchInput.value = '';
     
     applyDocFilters();
+    
+    // Обновляем визуальное состояние фильтров
+    if (typeof updateDocFilterActiveStates === 'function') updateDocFilterActiveStates();
 }
 
 // Сортировка документов

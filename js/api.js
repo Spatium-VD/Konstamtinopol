@@ -3,6 +3,10 @@
 
 // Загрузка данных из Google Apps Script
 async function loadData() {
+    // Дизейблим кнопки-режимы во время загрузки (UX: loading buttons)
+    const modeButtons = [elements.lastPeriodBtn, elements.lastUnpaidBtn];
+    modeButtons.forEach(btn => { if (btn) btn.disabled = true; });
+    
     try {
         // Показываем индикатор загрузки данных
         const indicator = document.getElementById('data-loading-indicator');
@@ -10,6 +14,7 @@ async function loadData() {
         
         showLoading();
         if (elements.docLoading) elements.docLoading.classList.remove('hidden');
+
         
         const APPS_SCRIPT_URL = CONFIG.appsScriptUrl;
         
@@ -55,6 +60,9 @@ async function loadData() {
         // Скрываем индикатор загрузки после завершения
         const indicator = document.getElementById('data-loading-indicator');
         if (indicator) indicator.classList.add('hidden');
+        
+        // Разблокируем кнопки-режимы после загрузки
+        modeButtons.forEach(btn => { if (btn) btn.disabled = false; });
     }
 }
 
@@ -305,11 +313,14 @@ function processLoadedData(result) {
         console.error('Ошибка при обновлении времени:', error);
     }
     
-    // Обновляем графики на дашборде если он открыт
+    // Обновляем виджеты на активном экране
     try {
-        if (currentScreen === 'dashboard') {
+        if (currentScreen === 'home') {
             setTimeout(() => {
                 renderDashboardCharts();
+            }, 100);
+        } else if (currentScreen === 'dashboard') {
+            setTimeout(() => {
                 renderAccountsDashboard();
             }, 100);
         }

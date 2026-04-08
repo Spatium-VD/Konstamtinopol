@@ -104,6 +104,51 @@ function getStatusClass(status) {
     return 'status-other';
 }
 
+function populateSelectOptions(selectElement, options, placeholderLabel = 'Все статусы') {
+    if (!selectElement) {
+        return '';
+    }
+
+    const currentValue = selectElement.value;
+    const normalizedOptions = options
+        .map(option => typeof option === 'string'
+            ? { value: option, label: option }
+            : option
+        )
+        .filter(option => option && option.value !== undefined && option.value !== null && option.value !== '');
+
+    const uniqueOptions = [];
+    const seenValues = new Set();
+
+    normalizedOptions.forEach(option => {
+        if (seenValues.has(option.value)) {
+            return;
+        }
+
+        seenValues.add(option.value);
+        uniqueOptions.push(option);
+    });
+
+    selectElement.innerHTML = '';
+
+    const placeholderOption = document.createElement('option');
+    placeholderOption.value = '';
+    placeholderOption.textContent = placeholderLabel;
+    selectElement.appendChild(placeholderOption);
+
+    uniqueOptions.forEach(option => {
+        const optionElement = document.createElement('option');
+        optionElement.value = option.value;
+        optionElement.textContent = option.label;
+        selectElement.appendChild(optionElement);
+    });
+
+    const nextValue = seenValues.has(currentValue) ? currentValue : '';
+    selectElement.value = nextValue;
+
+    return nextValue;
+}
+
 // Debounce функция для оптимизации поиска
 function debounce(func, wait) {
     let timeout;

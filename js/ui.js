@@ -2,7 +2,13 @@
 // UI функции: таблицы, навигация, модальные окна, карточка сотрудника
 
 // Навигация между экранами
-function showScreen(screenName, action = null) {
+function showScreen(screenName, action = null, options = {}) {
+    const { preserveHistory = true } = options;
+
+    if (preserveHistory && currentScreen && currentScreen !== screenName) {
+        screenHistory.push(currentScreen);
+    }
+
     // Скрываем все экраны
     document.querySelectorAll('.screen').forEach(screen => {
         screen.classList.add('hidden');
@@ -34,6 +40,9 @@ function showScreen(screenName, action = null) {
     switch(screenName) {
         case 'home':
             if (elements.homeScreen) elements.homeScreen.classList.remove('hidden');
+            setTimeout(() => {
+                renderDashboardCharts();
+            }, 100);
             break;
         case 'payments':
             if (elements.paymentsScreen) elements.paymentsScreen.classList.remove('hidden');
@@ -53,12 +62,11 @@ function showScreen(screenName, action = null) {
             }
             break;
         case 'dashboard':
-            // Проверяем пароль перед показом дашборда
+            // Проверяем пароль перед показом раздела счетов
             checkDashboardPassword();
-            // После успешной проверки пароля графики отрисуются автоматически
+            // После успешной проверки пароля обновляем только раздел счетов
             setTimeout(() => {
                 if (elements.dashboardScreen && !elements.dashboardScreen.classList.contains('hidden')) {
-                    renderDashboardCharts();
                     if (typeof renderAccountsDashboard === 'function') {
                         renderAccountsDashboard();
                     }
@@ -81,19 +89,19 @@ function showScreen(screenName, action = null) {
     console.log('Переключение на экран:', screenName);
 }
 
-// Проверка пароля для доступа к дашборду
+// Проверка пароля для доступа к разделу счетов
 function checkDashboardPassword() {
     // Проверяем, был ли уже введен правильный пароль в этой сессии
     const dashboardAccessGranted = sessionStorage.getItem('dashboardAccessGranted') === 'true';
     
     if (dashboardAccessGranted) {
-        // Доступ уже предоставлен, показываем дашборд
+        // Доступ уже предоставлен, показываем раздел счетов
         if (elements.dashboardScreen) elements.dashboardScreen.classList.remove('hidden');
         return;
     }
     
     // Запрашиваем пароль
-    const password = prompt('Введите пароль для доступа к дашборду:');
+    const password = prompt('Введите пароль для доступа к разделу счетов:');
     
     if (password === CONFIG.dashboardPassword) {
         // Пароль правильный, сохраняем доступ в сессии
@@ -103,7 +111,7 @@ function checkDashboardPassword() {
         // Пароль неверный, возвращаемся на главную
         alert('Неверный пароль. Доступ запрещен.');
         showScreen('home');
-        // Убираем активность с кнопки дашборда
+        // Убираем активность с кнопки счетов
         elements.navLinks.forEach(link => {
             if (link.getAttribute('data-page') === 'dashboard') {
                 link.classList.remove('active');
@@ -134,11 +142,23 @@ function renderTable() {
     }
     
     if (filteredPayments.length === 0) {
+        // Определяем причину: нет данных вообще или активны фильтры
+        const hasActiveFilters = (elements.periodYearFilter && elements.periodYearFilter.value) ||
+            (elements.statusFilter && elements.statusFilter.value) ||
+            (elements.searchInput && elements.searchInput.value);
+        
+        const emptyIcon = hasActiveFilters ? 'fa-filter' : 'fa-inbox';
+        const emptyTitle = hasActiveFilters ? 'Нет данных по выбранным фильтрам' : 'Нет данных для отображения';
+        const emptyHint = hasActiveFilters
+            ? `<br><button class="btn btn-secondary" style="margin-top:12px;" onclick="resetFilters(); updateFilterActiveStates();"><i class="fas fa-redo"></i> Сбросить фильтры</button>`
+            : '';
+        
         elements.tableBody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-search" style="font-size: 2rem; color: #bdc3c7; margin-bottom: 15px; display: block;"></i>
-                    <p>Нет данных, соответствующих фильтрам</p>
+                <td colspan="8" style="text-align: center; padding: 48px 20px;">
+                    <i class="fas ${emptyIcon}" style="font-size: 2.2rem; color: var(--ink-faint); margin-bottom: 14px; display: block;"></i>
+                    <p style="color: var(--ink-subtle); font-size: 15px; font-weight: 500;">${emptyTitle}</p>
+                    ${emptyHint}
                 </td>
             </tr>
         `;
@@ -267,6 +287,8 @@ function getDocumentStatusIndicator(doc) {
                 return '<span class="doc-status-indicator status-partial"><i class="fas fa-exclamation-circle"></i> Частично</span>';
             case 'not-processed':
                 return '<span class="doc-status-indicator status-error"><i class="fas fa-times-circle"></i> Не оформлен</span>';
+            case 'dismissed':
+                return '<span class="doc-status-indicator status-error"><i class="fas fa-user-times"></i> Уволен</span>';
             default:
                 return '<span class="doc-status-indicator status-partial"><i class="fas fa-question-circle"></i> Нет данных</span>';
         }
@@ -280,11 +302,25 @@ function renderDocumentsTable() {
     if (!elements.docTableBody) return;
     
     if (filteredDocuments.length === 0) {
+        // Определяем причину: нет данных вообще или активны фильтры
+        const hasActiveDocFilters = (elements.docStatusFilter && elements.docStatusFilter.value) ||
+            (elements.docPositionFilter && elements.docPositionFilter.value) ||
+            (elements.docRestaurantFilter && elements.docRestaurantFilter.value) ||
+            (elements.docProblemsFilter && elements.docProblemsFilter.value) ||
+            (elements.docSearchInput && elements.docSearchInput.value);
+        
+        const emptyIcon = hasActiveDocFilters ? 'fa-filter' : 'fa-inbox';
+        const emptyTitle = hasActiveDocFilters ? 'Нет данных по выбранным фильтрам' : 'Нет данных для отображения';
+        const emptyHint = hasActiveDocFilters
+            ? `<br><button class="btn btn-secondary" style="margin-top:12px;" onclick="resetDocFilters(); updateDocFilterActiveStates();"><i class="fas fa-redo"></i> Сбросить фильтры</button>`
+            : '';
+        
         elements.docTableBody.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-search" style="font-size: 2rem; color: #bdc3c7; margin-bottom: 15px; display: block;"></i>
-                    <p>Нет данных, соответствующих фильтрам</p>
+                <td colspan="6" style="text-align: center; padding: 48px 20px;">
+                    <i class="fas ${emptyIcon}" style="font-size: 2.2rem; color: var(--ink-faint); margin-bottom: 14px; display: block;"></i>
+                    <p style="color: var(--ink-subtle); font-size: 15px; font-weight: 500;">${emptyTitle}</p>
+                    ${emptyHint}
                 </td>
             </tr>
         `;
@@ -506,11 +542,17 @@ function showEmployeeDetailsByINN(inn, payment = null) {
                 if (elements.employeeName) {
                     elements.employeeName.textContent = currentEmployee.employee;
                 }
+                // Аватар — инициалы
+                const avatarEl = document.getElementById('employee-avatar');
+                if (avatarEl) {
+                    const parts = (currentEmployee.employee || '').split(/\s+/).filter(Boolean);
+                    avatarEl.textContent = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (parts[0] || '?')[0].toUpperCase();
+                }
                 if (elements.employeePhone) {
-                    elements.employeePhone.textContent = `📱 ${formatPhone(currentEmployee.phone)}`;
+                    elements.employeePhone.innerHTML = `<i class="fas fa-phone"></i> ${formatPhone(currentEmployee.phone)}`;
                 }
                 if (elements.employeeCitizenship && currentEmployee.citizenship) {
-                    elements.employeeCitizenship.textContent = `🌍 ${currentEmployee.citizenship}`;
+                    elements.employeeCitizenship.innerHTML = `<i class="fas fa-globe"></i> ${currentEmployee.citizenship}`;
                 }
                 
                 // Настраиваем Telegram ссылку
@@ -596,11 +638,17 @@ function showEmployeeDetailsByINN(inn, payment = null) {
     if (elements.employeeName) {
         elements.employeeName.textContent = currentEmployee.employee;
     }
+    // Аватар — инициалы
+    const avatarEl2 = document.getElementById('employee-avatar');
+    if (avatarEl2) {
+        const parts = (currentEmployee.employee || '').split(/\s+/).filter(Boolean);
+        avatarEl2.textContent = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (parts[0] || '?')[0].toUpperCase();
+    }
     if (elements.employeePhone) {
-        elements.employeePhone.textContent = `📱 ${formatPhone(currentEmployee.phone)}`;
+        elements.employeePhone.innerHTML = `<i class="fas fa-phone"></i> ${formatPhone(currentEmployee.phone)}`;
     }
     if (elements.employeeCitizenship && currentEmployee.citizenship) {
-        elements.employeeCitizenship.textContent = `🌍 ${currentEmployee.citizenship}`;
+        elements.employeeCitizenship.innerHTML = `<i class="fas fa-globe"></i> ${currentEmployee.citizenship}`;
     }
     
     // Настраиваем Telegram ссылку
@@ -643,8 +691,14 @@ function showEmployeeNotFoundMessage(payment = null) {
     if (elements.employeeName) {
         elements.employeeName.textContent = employeeName;
     }
+    // Аватар
+    const avatarNF = document.getElementById('employee-avatar');
+    if (avatarNF) {
+        const parts = employeeName.split(/\s+/).filter(Boolean);
+        avatarNF.textContent = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (parts[0] || '?')[0].toUpperCase();
+    }
     if (elements.employeePhone) {
-        elements.employeePhone.textContent = phone ? `📱 ${formatPhone(phone)}` : '';
+        elements.employeePhone.innerHTML = phone ? `<i class="fas fa-phone"></i> ${formatPhone(phone)}` : '';
     }
     if (elements.employeeCitizenship) {
         elements.employeeCitizenship.textContent = '';
@@ -770,12 +824,21 @@ function showEmployeeDataMismatchWarning(paymentName, docName, paymentPhone, doc
 // Отображение таблицы выплат сотрудника
 function renderEmployeeTable() {
     if (!elements.employeeTableBody) return;
+
+    const employeeStatusOptions = [...new Set(currentEmployeePayments.map(payment => (payment.status || '').trim()).filter(Boolean))].sort();
+    const selectedStatus = populateSelectOptions(elements.employeeStatusFilter, employeeStatusOptions, 'Все статусы');
+
+    const visiblePayments = selectedStatus
+        ? currentEmployeePayments.filter(payment => payment.status === selectedStatus)
+        : [...currentEmployeePayments];
     
-    if (currentEmployeePayments.length === 0) {
+    if (visiblePayments.length === 0) {
+        const emptyMessage = selectedStatus ? 'Нет выплат по выбранному статусу' : 'Нет данных о выплатах';
+
         elements.employeeTableBody.innerHTML = `
             <tr>
                 <td colspan="4" style="text-align: center; padding: 40px;">
-                    Нет данных о выплатах
+                    ${emptyMessage}
                 </td>
             </tr>
         `;
@@ -786,14 +849,14 @@ function renderEmployeeTable() {
     }
     
     // Сортируем по периоду (от новых к старым)
-    currentEmployeePayments.sort((a, b) => b.period.localeCompare(a.period));
+    visiblePayments.sort((a, b) => b.period.localeCompare(a.period));
     
     // Генерация строк таблицы
     let tableHTML = '';
     let totalAmount = 0;
     let lastPayment = '';
     
-    currentEmployeePayments.forEach(payment => {
+    visiblePayments.forEach(payment => {
         const statusClass = getStatusClass(payment.status);
         
         tableHTML += `
@@ -814,7 +877,7 @@ function renderEmployeeTable() {
     });
     
     elements.employeeTableBody.innerHTML = tableHTML;
-    if (elements.totalPayments) elements.totalPayments.textContent = currentEmployeePayments.length;
+    if (elements.totalPayments) elements.totalPayments.textContent = visiblePayments.length;
     if (elements.totalAmount) elements.totalAmount.textContent = formatCurrency(totalAmount);
     if (elements.lastPaymentDate) elements.lastPaymentDate.textContent = lastPayment;
     
@@ -1096,7 +1159,18 @@ function generateRecommendations(doc) {
 
 // Вспомогательные функции UI
 function showMainScreen() {
-    showScreen('home');
+    showScreen('home', null, { preserveHistory: false });
+}
+
+function showPreviousScreen() {
+    const previousScreen = screenHistory.pop();
+
+    if (previousScreen) {
+        showScreen(previousScreen, null, { preserveHistory: false });
+        return;
+    }
+
+    showMainScreen();
 }
 
 function showLoading() {

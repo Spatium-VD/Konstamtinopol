@@ -3,7 +3,7 @@
 
 // Функции для графиков на дашборде
 function renderDashboardCharts() {
-    if (currentScreen !== 'dashboard') return;
+    if (currentScreen !== 'home') return;
     
     // Обновляем карточки с метриками
     updateDashboardStats();
@@ -38,7 +38,7 @@ function updateDashboardStats() {
     // Обновляем значения
     const totalEl = document.getElementById('stat-total-employees');
     const processedEl = document.getElementById('stat-processed-employees');
-    const processedPercentEl = document.getElementById('stat-processed-percent');
+    const processedPercentEl = document.getElementById('stat-db-processed-percent');
     const inProcessEl = document.getElementById('stat-in-process-employees');
     const inProcessPercentEl = document.getElementById('stat-in-process-percent');
     const dismissedEl = document.getElementById('stat-dismissed-employees');
@@ -314,20 +314,40 @@ function renderAccountsDashboard() {
 // Отображение таблицы выплат из листа "Счета"
 function renderAccountsPaymentsTable() {
     const tbody = document.getElementById('accounts-payments-table-body');
+    const exportPaymentsBtn = document.getElementById('export-payments-csv');
     if (!tbody) {
         console.warn('Элемент accounts-payments-table-body не найден');
         return;
     }
+
+    const allAccountPayments = accountsData && accountsData.payments ? accountsData.payments : [];
+    const accountStatusOptions = [...new Set(allAccountPayments.map(payment => (payment.status || '').trim()).filter(Boolean))].sort();
+    const selectedStatus = populateSelectOptions(elements.accountsStatusFilter, accountStatusOptions, 'Все статусы');
     
-    if (!accountsData || !accountsData.payments || accountsData.payments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--gray-500);">Нет данных о выплатах</td></tr>';
+    if (allAccountPayments.length === 0) {
+        if (exportPaymentsBtn) {
+            exportPaymentsBtn.style.display = 'none';
+        }
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--gray-500);">Нет данных о счетах</td></tr>';
+        return;
+    }
+
+    const visiblePayments = selectedStatus
+        ? allAccountPayments.filter(payment => payment.status === selectedStatus)
+        : allAccountPayments;
+
+    if (visiblePayments.length === 0) {
+        if (exportPaymentsBtn) {
+            exportPaymentsBtn.style.display = 'none';
+        }
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--gray-500);">Нет счетов по выбранному статусу</td></tr>';
         return;
     }
     
-    console.log('Отображение выплат из листа "Счета":', accountsData.payments);
+    console.log('Отображение выплат из листа "Счета":', visiblePayments);
     
     let html = '';
-    accountsData.payments.forEach(payment => {
+    visiblePayments.forEach(payment => {
         html += `
             <tr>
                 <td>${payment.period || '-'}</td>
@@ -343,33 +363,31 @@ function renderAccountsPaymentsTable() {
     tbody.innerHTML = html;
     
     // Показываем кнопку экспорта CSV для выплат
-    const exportPaymentsBtn = document.getElementById('export-payments-csv');
-    if (exportPaymentsBtn && accountsData.payments && accountsData.payments.length > 0) {
+    if (exportPaymentsBtn && visiblePayments.length > 0) {
         exportPaymentsBtn.style.display = 'block';
         exportPaymentsBtn.onclick = function() {
-            exportPaymentsToCSV(accountsData.payments);
+            exportPaymentsToCSV(visiblePayments);
         };
     } else if (exportPaymentsBtn) {
         exportPaymentsBtn.style.display = 'none';
     }
 }
 
-// Отображение таблицы транзакций (раскрывающаяся)
+// Отображение таблицы транзакций (одна таблица, первые N видны, остальные по кнопке)
 function renderTransactionsTable() {
-    const summaryDiv = document.getElementById('transactions-summary');
+    const VISIBLE_COUNT = 3; // сколько строк показывать сразу
     const tbody = document.getElementById('transactions-table-body');
     const toggleButton = document.getElementById('toggle-transactions');
-    const fullListDiv = document.getElementById('transactions-full-list');
     const totalSumEl = document.getElementById('transactions-total-sum');
     
-    if (!summaryDiv || !tbody || !toggleButton || !fullListDiv) {
+    if (!tbody) {
         console.warn('Элементы для транзакций не найдены');
         return;
     }
     
     if (!accountsData || !accountsData.transactions || accountsData.transactions.length === 0) {
-        summaryDiv.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--gray-500);">Нет транзакций</p>';
-        toggleButton.style.display = 'none';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--ink-subtle);">Нет транзакций</td></tr>';
+        if (toggleButton) toggleButton.style.display = 'none';
         if (totalSumEl) totalSumEl.textContent = '0 ₽';
         return;
     }
@@ -382,77 +400,57 @@ function renderTransactionsTable() {
         totalSumEl.textContent = formatCurrency(Math.abs(totalSum)) + ' ₽';
     }
     
-    // Сортируем транзакции по дате (от новых к старым) или берем последнюю добавленную
-    // Берем последнюю транзакцию из массива (которая была добавлена последней)
-    const sortedTransactions = [...accountsData.transactions].reverse(); // Переворачиваем массив, чтобы последняя была первой
+    // Сортируем: новые сверху
+    const sortedTransactions = [...accountsData.transactions].reverse();
     
-    // Показываем последнюю транзакцию в summary (первая в перевернутом массиве)
-    const lastTransaction = sortedTransactions[0];
-    const amountClass = lastTransaction.amount >= 0 ? 'positive' : 'negative';
+    // Рендерим все строки, скрытые после VISIBLE_COUNT
+    let html = '';
+    sortedTransactions.forEach((transaction, i) => {
+        const amountClass = transaction.amount >= 0 ? 'positive' : 'negative';
+        const hiddenAttr = i >= VISIBLE_COUNT ? ' class="transaction-hidden" style="display:none;"' : '';
+        html += `
+            <tr${hiddenAttr}>
+                <td>${transaction.date || '-'}</td>
+                <td>${transaction.account || '-'}</td>
+                <td class="${amountClass}">${formatCurrency(Math.abs(transaction.amount))} ₽</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
     
-    summaryDiv.innerHTML = `
-        <table class="transactions-table">
-            <thead>
-                <tr>
-                    <th>Дата</th>
-                    <th>Лицо</th>
-                    <th>Сумма</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>${lastTransaction.date || '-'}</td>
-                    <td>${lastTransaction.account || '-'}</td>
-                    <td class="${amountClass}">${formatCurrency(Math.abs(lastTransaction.amount))} ₽</td>
-                </tr>
-            </tbody>
-        </table>
-    `;
-    
-    // Если транзакций больше одной, показываем кнопку раскрытия
-    if (sortedTransactions.length > 1) {
-        toggleButton.style.display = 'block';
-        toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> Показать всю историю (' + sortedTransactions.length + ' транзакций)';
-        
-        // Обработчик клика на кнопку
-        toggleButton.onclick = function() {
-            const isExpanded = fullListDiv.style.display !== 'none';
-            if (isExpanded) {
-                fullListDiv.style.display = 'none';
-                toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> Показать всю историю (' + sortedTransactions.length + ' транзакций)';
-            } else {
-                fullListDiv.style.display = 'block';
-                toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> Скрыть историю';
-            }
-        };
-        
-        // Заполняем полный список транзакций
-        let html = '';
-        sortedTransactions.forEach(transaction => {
-            const amountClass = transaction.amount >= 0 ? 'positive' : 'negative';
-            html += `
-                <tr>
-                    <td>${transaction.date || '-'}</td>
-                    <td>${transaction.account || '-'}</td>
-                    <td class="${amountClass}">${formatCurrency(Math.abs(transaction.amount))} ₽</td>
-                </tr>
-            `;
-        });
-        
-        tbody.innerHTML = html;
-        
-        // Показываем кнопку экспорта CSV
-        const exportBtn = document.getElementById('export-transactions-csv');
-        if (exportBtn) {
-            exportBtn.style.display = 'block';
-            exportBtn.onclick = function() {
-                exportTransactionsToCSV(sortedTransactions);
+    // Кнопка «Показать ещё» — только если есть скрытые строки
+    if (toggleButton) {
+        if (sortedTransactions.length > VISIBLE_COUNT) {
+            const hiddenCount = sortedTransactions.length - VISIBLE_COUNT;
+            toggleButton.style.display = 'block';
+            toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> Показать все (' + hiddenCount + ')';
+            
+            toggleButton.onclick = function() {
+                const hiddenRows = tbody.querySelectorAll('.transaction-hidden');
+                const isExpanded = hiddenRows.length > 0 && hiddenRows[0].style.display !== 'none';
+                
+                hiddenRows.forEach(row => {
+                    row.style.display = isExpanded ? 'none' : '';
+                });
+                
+                if (isExpanded) {
+                    toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> Показать все (' + hiddenCount + ')';
+                } else {
+                    toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> Свернуть';
+                }
             };
+        } else {
+            toggleButton.style.display = 'none';
         }
-    } else {
-        toggleButton.style.display = 'none';
-        const exportBtn = document.getElementById('export-transactions-csv');
-        if (exportBtn) exportBtn.style.display = 'none';
+    }
+    
+    // CSV-экспорт
+    const exportBtn = document.getElementById('export-transactions-csv');
+    if (exportBtn) {
+        exportBtn.style.display = sortedTransactions.length > 0 ? 'block' : 'none';
+        exportBtn.onclick = function() {
+            exportTransactionsToCSV(sortedTransactions);
+        };
     }
 }
 
