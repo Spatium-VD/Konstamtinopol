@@ -97,6 +97,19 @@ function mergeDataByINN() {
     });
 }
 
+function isDismissedDocument(doc) {
+    if (!doc || typeof doc !== 'object') {
+        return false;
+    }
+
+    const hasDismissedDate = !!(doc.dismissedDate && doc.dismissedDate.toString().trim());
+    const statusSources = [doc.realStatus, doc.collected, doc.inProcess];
+
+    return hasDismissedDate || statusSources.some(status =>
+        (status || '').toString().toLowerCase().includes('уволен')
+    );
+}
+
 // Определение статуса документов
 function getDocumentStatus(doc) {
     // Проверяем что doc существует
@@ -109,13 +122,13 @@ function getDocumentStatus(doc) {
     const inProcess = (doc.inProcess || '').toString().toLowerCase().trim();
     const realStatus = collected || inProcess || '';
     const realStatusLower = realStatus.toLowerCase();
+
+    if (isDismissedDocument(doc)) {
+        return 'dismissed';
+    }
     
     // Если есть реальный статус из таблицы, используем его
     if (realStatus) {
-        // Уволен — проверяем первым, чтобы "уволен без оформления" не попало в 'processed'
-        if (realStatusLower.includes('уволен')) {
-            return 'not-processed';
-        }
         // На оформлении / в обработке — до проверки на "оформлен"
         if (realStatusLower.includes('на оформлении') || realStatusLower.includes('обработке') || realStatusLower.includes('обновлено')) {
             return 'partial';
@@ -707,14 +720,16 @@ function applyDocFilters() {
     const selectedStatus = elements.docStatusFilter ? elements.docStatusFilter.value : '';
     if (selectedStatus) {
         filtered = filtered.filter(d => {
-            // Для фильтра "Уволен" (not-processed) проверяем реальный статус из таблицы
-            if (selectedStatus === 'not-processed') {
-                const realStatus = (d.realStatus || '').toLowerCase().trim();
-                const hasDismissedDate = d.dismissedDate && d.dismissedDate.toString().trim() !== '';
-                // Уволен = статус содержит "уволен" ИЛИ есть дата увольнения
-                return realStatus.includes('уволен') || hasDismissedDate;
+            const isDismissed = isDismissedDocument(d);
+
+            if (selectedStatus === 'dismissed') {
+                return isDismissed;
             }
-            // Для других фильтров используем documentStatus
+
+            if (selectedStatus === 'not-processed') {
+                return !isDismissed && d.documentStatus === 'not-processed';
+            }
+
             return d.documentStatus === selectedStatus;
         });
     }

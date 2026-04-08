@@ -281,6 +281,8 @@ function getDocumentStatusIndicator(doc) {
                 return '<span class="doc-status-indicator status-partial"><i class="fas fa-exclamation-circle"></i> Частично</span>';
             case 'not-processed':
                 return '<span class="doc-status-indicator status-error"><i class="fas fa-times-circle"></i> Не оформлен</span>';
+            case 'dismissed':
+                return '<span class="doc-status-indicator status-error"><i class="fas fa-user-times"></i> Уволен</span>';
             default:
                 return '<span class="doc-status-indicator status-partial"><i class="fas fa-question-circle"></i> Нет данных</span>';
         }

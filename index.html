@@ -42,11 +42,11 @@
             </div>
             <a href="#" class="brand-partner-name" data-page="home">Партнер – Чайхана</a>
             <div class="nav-links" role="navigation" aria-label="Главное меню">
-                <a href="#" class="nav-link" data-page="payments" aria-label="Выплаты сотрудникам">
-                    <i class="fas fa-money-check-alt" aria-hidden="true"></i> Выплаты
-                </a>
                 <a href="#" class="nav-link" data-page="documents" aria-label="Документы сотрудников">
                     <i class="fas fa-file-alt" aria-hidden="true"></i> Документы
+                </a>
+                <a href="#" class="nav-link" data-page="payments" aria-label="Выплаты сотрудникам">
+                    <i class="fas fa-money-check-alt" aria-hidden="true"></i> Выплаты
                 </a>
                 <a href="#" class="nav-link" data-page="dashboard" aria-label="Счета партнера">
                     <i class="fas fa-wallet" aria-hidden="true"></i> Счета
@@ -69,17 +69,19 @@
 
             <!-- Быстрые действия -->
             <div class="quick-actions">
-                <a href="https://t.me/VolDen_Ops" target="_blank" rel="noopener noreferrer" class="quick-action-btn sos-btn">
-                    <i class="fas fa-paper-plane" aria-hidden="true"></i>
-                    <span>Написать менеджеру</span>
+                <a href="#" class="quick-action-btn quick-action-payments" data-page="payments" data-action="last-payments">
+                    <div class="quick-action-icon"><i class="fas fa-bolt"></i></div>
+                    <div class="quick-action-text">
+                        <span class="quick-action-label">Последние выплаты</span>
+                        <span class="quick-action-desc">Перейти к выплатам</span>
+                    </div>
                 </a>
-                <a href="#" class="quick-action-btn" data-page="payments" data-action="last-payments">
-                    <i class="fas fa-bolt"></i>
-                    <span>Последние выплаты</span>
-                </a>
-                <a href="#" class="quick-action-btn warning-btn" data-page="documents" data-action="unprocessed">
-                    <i class="fas fa-exclamation-circle"></i>
-                    <span>Неоформленные</span>
+                <a href="#" class="quick-action-btn quick-action-warning" data-page="documents" data-action="unprocessed">
+                    <div class="quick-action-icon"><i class="fas fa-exclamation-circle"></i></div>
+                    <div class="quick-action-text">
+                        <span class="quick-action-label">Документы</span>
+                        <span class="quick-action-desc">Неоформленные</span>
+                    </div>
                 </a>
             </div>
 
@@ -171,6 +173,15 @@
                     <div class="stat-content">
                         <div class="stat-label">Полезные статьи</div>
                         <div class="stat-value">Памятки</div>
+                    </div>
+                </a>
+                <a href="https://t.me/VolDen_Ops" target="_blank" rel="noopener noreferrer" class="stat-card stat-card-link stat-card-telegram">
+                    <div class="stat-icon stat-icon-telegram">
+                        <i class="fas fa-paper-plane"></i>
+                    </div>
+                    <div class="stat-content">
+                        <div class="stat-label">Связь с менеджером</div>
+                        <div class="stat-value">Написать в Telegram</div>
                     </div>
                 </a>
             </div>
@@ -307,7 +318,8 @@
                             <option value="">Все статусы</option>
                             <option value="processed">✅ Оформлен</option>
                             <option value="partial">⚠ Частично оформлен</option>
-                            <option value="not-processed">❌ Уволен</option>
+                            <option value="not-processed">❌ Не оформлен</option>
+                            <option value="dismissed">🚫 Уволен</option>
                         </select>
                     </div>
                     <div class="filter-group">
