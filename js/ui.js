@@ -156,8 +156,8 @@ function renderTable() {
         elements.tableBody.innerHTML = `
             <tr>
                 <td colspan="8" style="text-align: center; padding: 48px 20px;">
-                    <i class="fas ${emptyIcon}" style="font-size: 2.2rem; color: var(--gray-300); margin-bottom: 14px; display: block;"></i>
-                    <p style="color: var(--gray-500); font-size: 15px; font-weight: 500;">${emptyTitle}</p>
+                    <i class="fas ${emptyIcon}" style="font-size: 2.2rem; color: var(--ink-faint); margin-bottom: 14px; display: block;"></i>
+                    <p style="color: var(--ink-subtle); font-size: 15px; font-weight: 500;">${emptyTitle}</p>
                     ${emptyHint}
                 </td>
             </tr>
