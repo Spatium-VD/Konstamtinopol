@@ -121,6 +121,8 @@ function initializeDOMElements() {
     elements.docProblemsFilter = document.getElementById('doc-problems-filter');
     elements.docSearchInput = document.getElementById('doc-search-input');
     elements.docResetFiltersBtn = document.getElementById('doc-reset-filters');
+    elements.accountsStatusFilter = document.getElementById('accounts-status-filter');
+    elements.employeeStatusFilter = document.getElementById('employee-status-filter');
     
     // Таблица документов
     elements.docLoading = document.getElementById('doc-loading');
@@ -216,6 +218,8 @@ function setupEventListeners() {
     if (elements.docProblemsFilter) elements.docProblemsFilter.addEventListener('change', () => { applyDocFilters(); updateDocFilterActiveStates(); });
     if (elements.docSearchInput) elements.docSearchInput.addEventListener('input', debounce(() => { applyDocFilters(); updateDocFilterActiveStates(); }, 300));
     if (elements.docResetFiltersBtn) elements.docResetFiltersBtn.addEventListener('click', () => { resetDocFilters(); updateDocFilterActiveStates(); });
+    if (elements.accountsStatusFilter) elements.accountsStatusFilter.addEventListener('change', () => { renderAccountsPaymentsTable(); });
+    if (elements.employeeStatusFilter) elements.employeeStatusFilter.addEventListener('change', () => { renderEmployeeTable(); });
     
     if (elements.docRetryBtn) elements.docRetryBtn.addEventListener('click', loadData);
     

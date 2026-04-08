@@ -314,20 +314,40 @@ function renderAccountsDashboard() {
 // Отображение таблицы выплат из листа "Счета"
 function renderAccountsPaymentsTable() {
     const tbody = document.getElementById('accounts-payments-table-body');
+    const exportPaymentsBtn = document.getElementById('export-payments-csv');
     if (!tbody) {
         console.warn('Элемент accounts-payments-table-body не найден');
         return;
     }
+
+    const allAccountPayments = accountsData && accountsData.payments ? accountsData.payments : [];
+    const accountStatusOptions = [...new Set(allAccountPayments.map(payment => (payment.status || '').trim()).filter(Boolean))].sort();
+    const selectedStatus = populateSelectOptions(elements.accountsStatusFilter, accountStatusOptions, 'Все статусы');
     
-    if (!accountsData || !accountsData.payments || accountsData.payments.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--gray-500);">Нет данных о выплатах</td></tr>';
+    if (allAccountPayments.length === 0) {
+        if (exportPaymentsBtn) {
+            exportPaymentsBtn.style.display = 'none';
+        }
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--gray-500);">Нет данных о счетах</td></tr>';
+        return;
+    }
+
+    const visiblePayments = selectedStatus
+        ? allAccountPayments.filter(payment => payment.status === selectedStatus)
+        : allAccountPayments;
+
+    if (visiblePayments.length === 0) {
+        if (exportPaymentsBtn) {
+            exportPaymentsBtn.style.display = 'none';
+        }
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 20px; color: var(--gray-500);">Нет счетов по выбранному статусу</td></tr>';
         return;
     }
     
-    console.log('Отображение выплат из листа "Счета":', accountsData.payments);
+    console.log('Отображение выплат из листа "Счета":', visiblePayments);
     
     let html = '';
-    accountsData.payments.forEach(payment => {
+    visiblePayments.forEach(payment => {
         html += `
             <tr>
                 <td>${payment.period || '-'}</td>
@@ -343,11 +363,10 @@ function renderAccountsPaymentsTable() {
     tbody.innerHTML = html;
     
     // Показываем кнопку экспорта CSV для выплат
-    const exportPaymentsBtn = document.getElementById('export-payments-csv');
-    if (exportPaymentsBtn && accountsData.payments && accountsData.payments.length > 0) {
+    if (exportPaymentsBtn && visiblePayments.length > 0) {
         exportPaymentsBtn.style.display = 'block';
         exportPaymentsBtn.onclick = function() {
-            exportPaymentsToCSV(accountsData.payments);
+            exportPaymentsToCSV(visiblePayments);
         };
     } else if (exportPaymentsBtn) {
         exportPaymentsBtn.style.display = 'none';

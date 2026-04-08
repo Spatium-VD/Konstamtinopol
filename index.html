@@ -411,6 +411,16 @@
                 
                 <!-- Таблица счетов -->
                 <div class="payments-table-section">
+                    <div class="filters">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label for="accounts-status-filter"><i class="fas fa-check-circle"></i> Статус счета:</label>
+                                <select id="accounts-status-filter">
+                                    <option value="">Все статусы</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                     <div class="section-header">
                         <h3><i class="fas fa-table"></i> Счета по периодам</h3>
                         <button id="export-payments-csv" class="btn btn-secondary" style="display:none;">
@@ -560,6 +570,16 @@
                 </div>
                 
                 <div id="employee-table-container" class="table-container hidden">
+                    <div class="filters">
+                        <div class="filter-row">
+                            <div class="filter-group">
+                                <label for="employee-status-filter"><i class="fas fa-check-circle"></i> Статус выплаты:</label>
+                                <select id="employee-status-filter">
+                                    <option value="">Все статусы</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
                     <div class="table-wrapper">
                         <table id="employee-payments-table">
                             <thead>

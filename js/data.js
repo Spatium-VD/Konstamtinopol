@@ -110,6 +110,13 @@ function isDismissedDocument(doc) {
     );
 }
 
+const DOCUMENT_STATUS_OPTIONS = [
+    { value: 'processed', label: '✅ Оформлен' },
+    { value: 'partial', label: '⚠ Частично оформлен' },
+    { value: 'not-processed', label: '❌ Не оформлен' },
+    { value: 'dismissed', label: '🚫 Уволен' }
+];
+
 // Определение статуса документов
 function getDocumentStatus(doc) {
     // Проверяем что doc существует
@@ -682,6 +689,10 @@ function sortPayments() {
 
 // Обновление фильтров документов
 function updateDocumentFilters() {
+    if (elements.docStatusFilter) {
+        populateSelectOptions(elements.docStatusFilter, DOCUMENT_STATUS_OPTIONS, 'Все статусы');
+    }
+
     // Должности
     const positions = [...new Set(allDocuments.map(d => d.position).filter(Boolean))].sort();
     if (elements.docPositionFilter) {

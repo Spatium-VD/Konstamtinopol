@@ -800,12 +800,21 @@ function showEmployeeDataMismatchWarning(paymentName, docName, paymentPhone, doc
 // Отображение таблицы выплат сотрудника
 function renderEmployeeTable() {
     if (!elements.employeeTableBody) return;
+
+    const employeeStatusOptions = [...new Set(currentEmployeePayments.map(payment => (payment.status || '').trim()).filter(Boolean))].sort();
+    const selectedStatus = populateSelectOptions(elements.employeeStatusFilter, employeeStatusOptions, 'Все статусы');
+
+    const visiblePayments = selectedStatus
+        ? currentEmployeePayments.filter(payment => payment.status === selectedStatus)
+        : [...currentEmployeePayments];
     
-    if (currentEmployeePayments.length === 0) {
+    if (visiblePayments.length === 0) {
+        const emptyMessage = selectedStatus ? 'Нет выплат по выбранному статусу' : 'Нет данных о выплатах';
+
         elements.employeeTableBody.innerHTML = `
             <tr>
                 <td colspan="4" style="text-align: center; padding: 40px;">
-                    Нет данных о выплатах
+                    ${emptyMessage}
                 </td>
             </tr>
         `;
@@ -816,14 +825,14 @@ function renderEmployeeTable() {
     }
     
     // Сортируем по периоду (от новых к старым)
-    currentEmployeePayments.sort((a, b) => b.period.localeCompare(a.period));
+    visiblePayments.sort((a, b) => b.period.localeCompare(a.period));
     
     // Генерация строк таблицы
     let tableHTML = '';
     let totalAmount = 0;
     let lastPayment = '';
     
-    currentEmployeePayments.forEach(payment => {
+    visiblePayments.forEach(payment => {
         const statusClass = getStatusClass(payment.status);
         
         tableHTML += `
@@ -844,7 +853,7 @@ function renderEmployeeTable() {
     });
     
     elements.employeeTableBody.innerHTML = tableHTML;
-    if (elements.totalPayments) elements.totalPayments.textContent = currentEmployeePayments.length;
+    if (elements.totalPayments) elements.totalPayments.textContent = visiblePayments.length;
     if (elements.totalAmount) elements.totalAmount.textContent = formatCurrency(totalAmount);
     if (elements.lastPaymentDate) elements.lastPaymentDate.textContent = lastPayment;
     
