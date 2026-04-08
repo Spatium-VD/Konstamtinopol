@@ -2224,5 +2224,4 @@ button:focus-visible {
 
 /* ─── Скрываем виджет Яндекс.Метрики ────────────────────────────── */
 #ym_counter,
-.ym-live-photo,
-[id^="ym-"] { display: none !important; }
+.ym-live-photo { display: none !important; }
