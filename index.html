@@ -20,7 +20,7 @@
     <link rel="icon" type="image/png" href="лого.png">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -36,10 +36,10 @@
     <div class="container">
         <!-- Навигация -->
         <nav class="main-nav">
-            <div class="nav-brand">
+            <a href="#" class="nav-brand" data-page="home" aria-label="На главную">
                 <img src="лого.png" alt="Логотип" class="brand-logo">
                 <span class="brand-company-name">Синержи</span>
-            </div>
+            </a>
             <a href="#" class="brand-partner-name" data-page="home">Партнер – Чайхана</a>
             <div class="nav-links" role="navigation" aria-label="Главное меню">
                 <a href="#" class="nav-link" data-page="documents" aria-label="Документы сотрудников">
@@ -62,11 +62,6 @@
 
         <!-- Главная страница -->
         <div id="home-screen" class="screen active">
-            <header>
-                <h1><i class="fas fa-home"></i> Главная</h1>
-                <p class="subtitle">Обзор системы и быстрый доступ</p>
-            </header>
-
             <!-- Быстрые действия -->
             <div class="quick-actions">
                 <a href="#" class="quick-action-btn quick-action-payments" data-page="payments" data-action="last-payments">
@@ -189,11 +184,6 @@
 
         <!-- Экран выплат (бывший main-screen) -->
         <div id="payments-screen" class="screen hidden">
-            <header>
-                <h1><i class="fas fa-money-check-alt"></i> Выплаты сотрудникам</h1>
-                <p class="subtitle">Здесь видно, кому, за какой период и в каком статусе идет выплата. Данные подтягиваются из таблицы автоматически.</p>
-            </header>
-
             <!-- Индикатор режима -->
             <div id="mode-indicator" class="mode-indicator hidden" role="status" aria-live="polite">
                 <i class="fas fa-info-circle" aria-hidden="true"></i>
@@ -304,11 +294,6 @@
 
         <!-- Экран документов -->
         <div id="documents-screen" class="screen hidden">
-            <header>
-                <h1><i class="fas fa-file-alt"></i> Документы сотрудников</h1>
-                <p class="subtitle">Контроль оформленности сотрудников</p>
-            </header>
-
             <!-- Фильтры документов -->
             <div class="filters">
                 <div class="filter-row">
@@ -400,104 +385,92 @@
 
         <!-- Экран счетов -->
         <div id="dashboard-screen" class="screen hidden">
-            <header>
-                <h1><i class="fas fa-wallet"></i> Счета</h1>
-                <p class="subtitle">Здесь собраны счета по периодам, суммы к оплате, уже оплаченные суммы и история оплат.</p>
-            </header>
 
-            <!-- Раздел счетов -->
-            <div class="dashboard-section accounts-section">
-                <h2><i class="fas fa-wallet"></i> Сводка по счетам</h2>
-                
-                <!-- Таблица счетов -->
-                <div class="payments-table-section">
-                    <div class="filters">
-                        <div class="filter-row">
-                            <div class="filter-group">
-                                <label for="accounts-status-filter"><i class="fas fa-check-circle"></i> Статус счета:</label>
-                                <select id="accounts-status-filter">
-                                    <option value="">Все статусы</option>
-                                </select>
-                            </div>
-                        </div>
+            <!-- Карточка с суммой всех транзакций — акцентная метрика -->
+            <div class="accounts-total-card">
+                <div class="accounts-total-icon">
+                    <i class="fas fa-ruble-sign"></i>
+                </div>
+                <div class="accounts-total-info">
+                    <div class="accounts-total-label">Общая сумма оплат</div>
+                    <div class="accounts-total-value" id="transactions-total-sum">0 ₽</div>
+                </div>
+            </div>
+
+            <!-- Блок 1: Счета по периодам -->
+            <div class="accounts-block">
+                <div class="accounts-block-header">
+                    <div class="accounts-block-title">
+                        <i class="fas fa-file-invoice-dollar"></i>
+                        <h2>Счета по периодам</h2>
                     </div>
-                    <div class="section-header">
-                        <h3><i class="fas fa-table"></i> Счета по периодам</h3>
+                    <div class="accounts-block-actions">
+                        <div class="filter-group filter-group-inline">
+                            <label for="accounts-status-filter"><i class="fas fa-filter"></i> Статус:</label>
+                            <select id="accounts-status-filter">
+                                <option value="">Все статусы</option>
+                            </select>
+                        </div>
                         <button id="export-payments-csv" class="btn btn-secondary" style="display:none;">
-                            <i class="fas fa-download"></i> Скачать CSV
+                            <i class="fas fa-download"></i> CSV
                         </button>
                     </div>
-                    <div class="table-wrapper">
-                        <table class="data-table" id="accounts-payments-table">
-                            <thead>
-                                <tr>
-                                    <th>Период</th>
-                                    <th>К оплате</th>
-                                    <th>Оплачено</th>
-                                    <th>Разница счетов</th>
-                                    <th>Статус</th>
-                                    <th>Комментарий</th>
-                                </tr>
-                            </thead>
-                            <tbody id="accounts-payments-table-body">
-                                <!-- Данные будут загружены через JavaScript -->
-                            </tbody>
-                        </table>
+                </div>
+                <div class="table-wrapper">
+                    <table class="data-table" id="accounts-payments-table">
+                        <thead>
+                            <tr>
+                                <th>Период</th>
+                                <th>К оплате</th>
+                                <th>Оплачено</th>
+                                <th>Разница</th>
+                                <th>Статус</th>
+                                <th>Комментарий</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounts-payments-table-body">
+                            <!-- Данные будут загружены через JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Блок 2: История оплат -->
+            <div class="accounts-block">
+                <div class="accounts-block-header">
+                    <div class="accounts-block-title">
+                        <i class="fas fa-history"></i>
+                        <h2>История оплат</h2>
+                    </div>
+                    <div class="accounts-block-actions">
+                        <button id="export-transactions-csv" class="btn btn-secondary" style="display:none;">
+                            <i class="fas fa-download"></i> CSV
+                        </button>
                     </div>
                 </div>
                 
-                <!-- История транзакций -->
-                <div class="transactions-section">
-                    <div class="section-header">
-                        <h3><i class="fas fa-history"></i> История оплат</h3>
-                        <button id="export-transactions-csv" class="btn btn-secondary" style="display:none;">
-                            <i class="fas fa-download"></i> Скачать CSV
-                        </button>
-                    </div>
-                    
-                    <!-- Карточка с суммой транзакций -->
-                    <div class="stat-card stat-card-primary stat-card-mb">
-                        <div class="stat-card-icon">
-                            <i class="fas fa-ruble-sign"></i>
-                        </div>
-                        <div class="stat-card-content">
-                            <div class="stat-card-label">Сумма транзакций</div>
-                            <div class="stat-card-value" id="transactions-total-sum">0 ₽</div>
-                        </div>
-                    </div>
-                    
-                    <div class="transactions-table-container">
-                        <div id="transactions-summary">
-                            <!-- Последняя транзакция будет здесь -->
-                        </div>
-                        <button id="toggle-transactions" class="btn btn-secondary" style="margin-top:10px; display:none;">
-                            <i class="fas fa-chevron-down"></i> Показать всю историю
-                        </button>
-                        <div id="transactions-full-list" style="display:none;">
-                            <table class="transactions-table">
-                                <thead>
-                                    <tr>
-                                        <th>Дата</th>
-                                        <th>Лицо</th>
-                                        <th>Сумма</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="transactions-table-body">
-                                    <!-- Данные будут загружены через JavaScript -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div class="transactions-table-container">
+                    <table class="transactions-table">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Лицо</th>
+                                <th>Сумма</th>
+                            </tr>
+                        </thead>
+                        <tbody id="transactions-table-body">
+                            <!-- Данные будут загружены через JavaScript -->
+                        </tbody>
+                    </table>
+                    <button id="toggle-transactions" class="btn btn-secondary btn-expand" style="display:none;">
+                        <i class="fas fa-chevron-down"></i> Показать всю историю
+                    </button>
                 </div>
             </div>
         </div>
 
         <!-- Экран СОС (заглушка) -->
         <div id="sos-screen" class="screen hidden">
-            <header>
-                <h1><i class="fas fa-paper-plane" aria-hidden="true"></i> Написать менеджеру</h1>
-                <p class="subtitle">Экстренные контакты и инструкции</p>
-            </header>
             <div class="coming-soon">
                 <i class="fas fa-tools"></i>
                 <h2>Страница в разработке</h2>
@@ -507,21 +480,26 @@
 
         <!-- Экран карточки сотрудника -->
         <div id="employee-screen" class="screen hidden">
-            <header>
-                <button id="back-button" class="btn btn-secondary" aria-label="Назад к списку">
+            <div class="employee-profile-header">
+                <button id="back-button" class="btn btn-secondary btn-back" aria-label="Назад к списку">
                     <i class="fas fa-arrow-left" aria-hidden="true"></i> Назад
                 </button>
-                <div class="employee-header">
-                    <h1 id="employee-name" aria-label="Имя сотрудника" aria-live="polite">&#8203;</h1>
+                <div class="employee-profile-card">
+                    <div class="employee-avatar" id="employee-avatar" aria-hidden="true">?</div>
+                    <div class="employee-profile-info">
+                        <h1 id="employee-name" aria-label="Имя сотрудника" aria-live="polite">&#8203;</h1>
+                        <div class="employee-meta">
+                            <span class="employee-chip" id="employee-phone"><i class="fas fa-phone"></i></span>
+                            <span class="employee-chip" id="employee-citizenship"><i class="fas fa-globe"></i></span>
+                        </div>
+                    </div>
                     <div class="employee-actions">
                         <a id="telegram-link" class="btn btn-telegram" target="_blank" rel="noopener noreferrer">
-                            <i class="fab fa-telegram" aria-hidden="true"></i> Написать в Telegram
+                            <i class="fab fa-telegram" aria-hidden="true"></i> Telegram
                         </a>
                     </div>
                 </div>
-                <p class="subtitle" id="employee-phone"></p>
-                <p class="subtitle" id="employee-citizenship"></p>
-            </header>
+            </div>
 
             <!-- Предупреждение о несовпадении данных -->
             <div id="employee-mismatch-warning" class="employee-mismatch-warning hidden"></div>
@@ -596,18 +574,27 @@
                         </table>
                     </div>
                     
-                    <div class="summary">
-                        <div class="summary-item">
-                            <span class="summary-label">Всего выплат:</span>
-                            <span id="total-payments" class="summary-value">0</span>
+                    <div class="employee-summary-cards">
+                        <div class="employee-metric-card">
+                            <div class="metric-icon"><i class="fas fa-receipt"></i></div>
+                            <div class="metric-data">
+                                <span class="metric-label">Всего выплат</span>
+                                <span id="total-payments" class="metric-value">0</span>
+                            </div>
                         </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Общая сумма:</span>
-                            <span id="total-amount" class="summary-value">0</span>
+                        <div class="employee-metric-card accent">
+                            <div class="metric-icon"><i class="fas fa-ruble-sign"></i></div>
+                            <div class="metric-data">
+                                <span class="metric-label">Общая сумма</span>
+                                <span id="total-amount" class="metric-value">0</span>
+                            </div>
                         </div>
-                        <div class="summary-item">
-                            <span class="summary-label">Последняя выплата:</span>
-                            <span id="last-payment-date" class="summary-value">-</span>
+                        <div class="employee-metric-card">
+                            <div class="metric-icon"><i class="fas fa-calendar-check"></i></div>
+                            <div class="metric-data">
+                                <span class="metric-label">Последняя выплата</span>
+                                <span id="last-payment-date" class="metric-value">-</span>
+                            </div>
                         </div>
                     </div>
                 </div>

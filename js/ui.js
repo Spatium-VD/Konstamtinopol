@@ -2,7 +2,13 @@
 // UI функции: таблицы, навигация, модальные окна, карточка сотрудника
 
 // Навигация между экранами
-function showScreen(screenName, action = null) {
+function showScreen(screenName, action = null, options = {}) {
+    const { preserveHistory = true } = options;
+
+    if (preserveHistory && currentScreen && currentScreen !== screenName) {
+        screenHistory.push(currentScreen);
+    }
+
     // Скрываем все экраны
     document.querySelectorAll('.screen').forEach(screen => {
         screen.classList.add('hidden');
@@ -536,11 +542,17 @@ function showEmployeeDetailsByINN(inn, payment = null) {
                 if (elements.employeeName) {
                     elements.employeeName.textContent = currentEmployee.employee;
                 }
+                // Аватар — инициалы
+                const avatarEl = document.getElementById('employee-avatar');
+                if (avatarEl) {
+                    const parts = (currentEmployee.employee || '').split(/\s+/).filter(Boolean);
+                    avatarEl.textContent = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (parts[0] || '?')[0].toUpperCase();
+                }
                 if (elements.employeePhone) {
-                    elements.employeePhone.textContent = `📱 ${formatPhone(currentEmployee.phone)}`;
+                    elements.employeePhone.innerHTML = `<i class="fas fa-phone"></i> ${formatPhone(currentEmployee.phone)}`;
                 }
                 if (elements.employeeCitizenship && currentEmployee.citizenship) {
-                    elements.employeeCitizenship.textContent = `🌍 ${currentEmployee.citizenship}`;
+                    elements.employeeCitizenship.innerHTML = `<i class="fas fa-globe"></i> ${currentEmployee.citizenship}`;
                 }
                 
                 // Настраиваем Telegram ссылку
@@ -626,11 +638,17 @@ function showEmployeeDetailsByINN(inn, payment = null) {
     if (elements.employeeName) {
         elements.employeeName.textContent = currentEmployee.employee;
     }
+    // Аватар — инициалы
+    const avatarEl2 = document.getElementById('employee-avatar');
+    if (avatarEl2) {
+        const parts = (currentEmployee.employee || '').split(/\s+/).filter(Boolean);
+        avatarEl2.textContent = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (parts[0] || '?')[0].toUpperCase();
+    }
     if (elements.employeePhone) {
-        elements.employeePhone.textContent = `📱 ${formatPhone(currentEmployee.phone)}`;
+        elements.employeePhone.innerHTML = `<i class="fas fa-phone"></i> ${formatPhone(currentEmployee.phone)}`;
     }
     if (elements.employeeCitizenship && currentEmployee.citizenship) {
-        elements.employeeCitizenship.textContent = `🌍 ${currentEmployee.citizenship}`;
+        elements.employeeCitizenship.innerHTML = `<i class="fas fa-globe"></i> ${currentEmployee.citizenship}`;
     }
     
     // Настраиваем Telegram ссылку
@@ -673,8 +691,14 @@ function showEmployeeNotFoundMessage(payment = null) {
     if (elements.employeeName) {
         elements.employeeName.textContent = employeeName;
     }
+    // Аватар
+    const avatarNF = document.getElementById('employee-avatar');
+    if (avatarNF) {
+        const parts = employeeName.split(/\s+/).filter(Boolean);
+        avatarNF.textContent = parts.length >= 2 ? (parts[0][0] + parts[1][0]).toUpperCase() : (parts[0] || '?')[0].toUpperCase();
+    }
     if (elements.employeePhone) {
-        elements.employeePhone.textContent = phone ? `📱 ${formatPhone(phone)}` : '';
+        elements.employeePhone.innerHTML = phone ? `<i class="fas fa-phone"></i> ${formatPhone(phone)}` : '';
     }
     if (elements.employeeCitizenship) {
         elements.employeeCitizenship.textContent = '';
@@ -1135,7 +1159,18 @@ function generateRecommendations(doc) {
 
 // Вспомогательные функции UI
 function showMainScreen() {
-    showScreen('home');
+    showScreen('home', null, { preserveHistory: false });
+}
+
+function showPreviousScreen() {
+    const previousScreen = screenHistory.pop();
+
+    if (previousScreen) {
+        showScreen(previousScreen, null, { preserveHistory: false });
+        return;
+    }
+
+    showMainScreen();
 }
 
 function showLoading() {

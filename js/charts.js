@@ -373,22 +373,21 @@ function renderAccountsPaymentsTable() {
     }
 }
 
-// Отображение таблицы транзакций (раскрывающаяся)
+// Отображение таблицы транзакций (одна таблица, первые N видны, остальные по кнопке)
 function renderTransactionsTable() {
-    const summaryDiv = document.getElementById('transactions-summary');
+    const VISIBLE_COUNT = 3; // сколько строк показывать сразу
     const tbody = document.getElementById('transactions-table-body');
     const toggleButton = document.getElementById('toggle-transactions');
-    const fullListDiv = document.getElementById('transactions-full-list');
     const totalSumEl = document.getElementById('transactions-total-sum');
     
-    if (!summaryDiv || !tbody || !toggleButton || !fullListDiv) {
+    if (!tbody) {
         console.warn('Элементы для транзакций не найдены');
         return;
     }
     
     if (!accountsData || !accountsData.transactions || accountsData.transactions.length === 0) {
-        summaryDiv.innerHTML = '<p style="text-align: center; padding: 20px; color: var(--gray-500);">Нет транзакций</p>';
-        toggleButton.style.display = 'none';
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 20px; color: var(--gray-500);">Нет транзакций</td></tr>';
+        if (toggleButton) toggleButton.style.display = 'none';
         if (totalSumEl) totalSumEl.textContent = '0 ₽';
         return;
     }
@@ -401,77 +400,57 @@ function renderTransactionsTable() {
         totalSumEl.textContent = formatCurrency(Math.abs(totalSum)) + ' ₽';
     }
     
-    // Сортируем транзакции по дате (от новых к старым) или берем последнюю добавленную
-    // Берем последнюю транзакцию из массива (которая была добавлена последней)
-    const sortedTransactions = [...accountsData.transactions].reverse(); // Переворачиваем массив, чтобы последняя была первой
+    // Сортируем: новые сверху
+    const sortedTransactions = [...accountsData.transactions].reverse();
     
-    // Показываем последнюю транзакцию в summary (первая в перевернутом массиве)
-    const lastTransaction = sortedTransactions[0];
-    const amountClass = lastTransaction.amount >= 0 ? 'positive' : 'negative';
+    // Рендерим все строки, скрытые после VISIBLE_COUNT
+    let html = '';
+    sortedTransactions.forEach((transaction, i) => {
+        const amountClass = transaction.amount >= 0 ? 'positive' : 'negative';
+        const hiddenAttr = i >= VISIBLE_COUNT ? ' class="transaction-hidden" style="display:none;"' : '';
+        html += `
+            <tr${hiddenAttr}>
+                <td>${transaction.date || '-'}</td>
+                <td>${transaction.account || '-'}</td>
+                <td class="${amountClass}">${formatCurrency(Math.abs(transaction.amount))} ₽</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
     
-    summaryDiv.innerHTML = `
-        <table class="transactions-table">
-            <thead>
-                <tr>
-                    <th>Дата</th>
-                    <th>Лицо</th>
-                    <th>Сумма</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>${lastTransaction.date || '-'}</td>
-                    <td>${lastTransaction.account || '-'}</td>
-                    <td class="${amountClass}">${formatCurrency(Math.abs(lastTransaction.amount))} ₽</td>
-                </tr>
-            </tbody>
-        </table>
-    `;
-    
-    // Если транзакций больше одной, показываем кнопку раскрытия
-    if (sortedTransactions.length > 1) {
-        toggleButton.style.display = 'block';
-        toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> Показать всю историю (' + sortedTransactions.length + ' транзакций)';
-        
-        // Обработчик клика на кнопку
-        toggleButton.onclick = function() {
-            const isExpanded = fullListDiv.style.display !== 'none';
-            if (isExpanded) {
-                fullListDiv.style.display = 'none';
-                toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> Показать всю историю (' + sortedTransactions.length + ' транзакций)';
-            } else {
-                fullListDiv.style.display = 'block';
-                toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> Скрыть историю';
-            }
-        };
-        
-        // Заполняем полный список транзакций
-        let html = '';
-        sortedTransactions.forEach(transaction => {
-            const amountClass = transaction.amount >= 0 ? 'positive' : 'negative';
-            html += `
-                <tr>
-                    <td>${transaction.date || '-'}</td>
-                    <td>${transaction.account || '-'}</td>
-                    <td class="${amountClass}">${formatCurrency(Math.abs(transaction.amount))} ₽</td>
-                </tr>
-            `;
-        });
-        
-        tbody.innerHTML = html;
-        
-        // Показываем кнопку экспорта CSV
-        const exportBtn = document.getElementById('export-transactions-csv');
-        if (exportBtn) {
-            exportBtn.style.display = 'block';
-            exportBtn.onclick = function() {
-                exportTransactionsToCSV(sortedTransactions);
+    // Кнопка «Показать ещё» — только если есть скрытые строки
+    if (toggleButton) {
+        if (sortedTransactions.length > VISIBLE_COUNT) {
+            const hiddenCount = sortedTransactions.length - VISIBLE_COUNT;
+            toggleButton.style.display = 'block';
+            toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> Показать все (' + hiddenCount + ')';
+            
+            toggleButton.onclick = function() {
+                const hiddenRows = tbody.querySelectorAll('.transaction-hidden');
+                const isExpanded = hiddenRows.length > 0 && hiddenRows[0].style.display !== 'none';
+                
+                hiddenRows.forEach(row => {
+                    row.style.display = isExpanded ? 'none' : '';
+                });
+                
+                if (isExpanded) {
+                    toggleButton.innerHTML = '<i class="fas fa-chevron-down"></i> Показать все (' + hiddenCount + ')';
+                } else {
+                    toggleButton.innerHTML = '<i class="fas fa-chevron-up"></i> Свернуть';
+                }
             };
+        } else {
+            toggleButton.style.display = 'none';
         }
-    } else {
-        toggleButton.style.display = 'none';
-        const exportBtn = document.getElementById('export-transactions-csv');
-        if (exportBtn) exportBtn.style.display = 'none';
+    }
+    
+    // CSV-экспорт
+    const exportBtn = document.getElementById('export-transactions-csv');
+    if (exportBtn) {
+        exportBtn.style.display = sortedTransactions.length > 0 ? 'block' : 'none';
+        exportBtn.onclick = function() {
+            exportTransactionsToCSV(sortedTransactions);
+        };
     }
 }
 

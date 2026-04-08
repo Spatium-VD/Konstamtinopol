@@ -21,6 +21,7 @@ let allPositions = [];
 let allRestaurants = [];
 let lastPeriod = '';
 let currentScreen = 'home'; // 'home', 'payments', 'documents', 'dashboard', 'sos', 'employee'
+let screenHistory = [];
 
 // Элементы DOM - будем заполнять после загрузки DOM
 const elements = {};
@@ -188,6 +189,15 @@ function setupEventListeners() {
         });
     }
     
+    // Обработчик для логотипа — переход на главную
+    const navBrandLink = document.querySelector('.nav-brand[data-page="home"]');
+    if (navBrandLink) {
+        navBrandLink.addEventListener('click', (e) => {
+            e.preventDefault();
+            showScreen('home');
+        });
+    }
+    
     // Быстрые действия
     elements.quickActionBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -244,7 +254,7 @@ function setupEventListeners() {
     
     // Кнопки
     if (elements.retryBtn) elements.retryBtn.addEventListener('click', loadData);
-    if (elements.backButton) elements.backButton.addEventListener('click', showMainScreen);
+    if (elements.backButton) elements.backButton.addEventListener('click', showPreviousScreen);
     if (elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCSV);
     
     // Сортировка таблицы
