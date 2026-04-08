@@ -34,6 +34,9 @@ function showScreen(screenName, action = null) {
     switch(screenName) {
         case 'home':
             if (elements.homeScreen) elements.homeScreen.classList.remove('hidden');
+            setTimeout(() => {
+                renderDashboardCharts();
+            }, 100);
             break;
         case 'payments':
             if (elements.paymentsScreen) elements.paymentsScreen.classList.remove('hidden');
@@ -53,12 +56,11 @@ function showScreen(screenName, action = null) {
             }
             break;
         case 'dashboard':
-            // Проверяем пароль перед показом дашборда
+            // Проверяем пароль перед показом раздела счетов
             checkDashboardPassword();
-            // После успешной проверки пароля графики отрисуются автоматически
+            // После успешной проверки пароля обновляем только раздел счетов
             setTimeout(() => {
                 if (elements.dashboardScreen && !elements.dashboardScreen.classList.contains('hidden')) {
-                    renderDashboardCharts();
                     if (typeof renderAccountsDashboard === 'function') {
                         renderAccountsDashboard();
                     }
@@ -81,19 +83,19 @@ function showScreen(screenName, action = null) {
     console.log('Переключение на экран:', screenName);
 }
 
-// Проверка пароля для доступа к дашборду
+// Проверка пароля для доступа к разделу счетов
 function checkDashboardPassword() {
     // Проверяем, был ли уже введен правильный пароль в этой сессии
     const dashboardAccessGranted = sessionStorage.getItem('dashboardAccessGranted') === 'true';
     
     if (dashboardAccessGranted) {
-        // Доступ уже предоставлен, показываем дашборд
+        // Доступ уже предоставлен, показываем раздел счетов
         if (elements.dashboardScreen) elements.dashboardScreen.classList.remove('hidden');
         return;
     }
     
     // Запрашиваем пароль
-    const password = prompt('Введите пароль для доступа к дашборду:');
+    const password = prompt('Введите пароль для доступа к разделу счетов:');
     
     if (password === CONFIG.dashboardPassword) {
         // Пароль правильный, сохраняем доступ в сессии
@@ -103,7 +105,7 @@ function checkDashboardPassword() {
         // Пароль неверный, возвращаемся на главную
         alert('Неверный пароль. Доступ запрещен.');
         showScreen('home');
-        // Убираем активность с кнопки дашборда
+        // Убираем активность с кнопки счетов
         elements.navLinks.forEach(link => {
             if (link.getAttribute('data-page') === 'dashboard') {
                 link.classList.remove('active');

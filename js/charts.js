@@ -3,7 +3,7 @@
 
 // Функции для графиков на дашборде
 function renderDashboardCharts() {
-    if (currentScreen !== 'dashboard') return;
+    if (currentScreen !== 'home') return;
     
     // Обновляем карточки с метриками
     updateDashboardStats();

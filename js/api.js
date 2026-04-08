@@ -313,11 +313,14 @@ function processLoadedData(result) {
         console.error('Ошибка при обновлении времени:', error);
     }
     
-    // Обновляем графики на дашборде если он открыт
+    // Обновляем виджеты на активном экране
     try {
-        if (currentScreen === 'dashboard') {
+        if (currentScreen === 'home') {
             setTimeout(() => {
                 renderDashboardCharts();
+            }, 100);
+        } else if (currentScreen === 'dashboard') {
+            setTimeout(() => {
                 renderAccountsDashboard();
             }, 100);
         }

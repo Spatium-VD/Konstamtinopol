@@ -18,6 +18,9 @@
     <noscript><div><img src="https://mc.yandex.ru/watch/106901172" style="position:absolute; left:-9999px;" alt="" /></div></noscript>
     <!-- /Yandex.Metrika counter -->
     <link rel="icon" type="image/png" href="лого.png">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
@@ -39,14 +42,14 @@
             </div>
             <a href="#" class="brand-partner-name" data-page="home">Партнер – Чайхана</a>
             <div class="nav-links" role="navigation" aria-label="Главное меню">
-                <a href="#" class="nav-link" data-page="payments" aria-label="Статусы выплат">
+                <a href="#" class="nav-link" data-page="payments" aria-label="Выплаты сотрудникам">
                     <i class="fas fa-money-check-alt" aria-hidden="true"></i> Выплаты
                 </a>
                 <a href="#" class="nav-link" data-page="documents" aria-label="Документы сотрудников">
                     <i class="fas fa-file-alt" aria-hidden="true"></i> Документы
                 </a>
-                <a href="#" class="nav-link" data-page="dashboard" aria-label="Дашборд управления">
-                    <i class="fas fa-chart-bar" aria-hidden="true"></i> Дашборд
+                <a href="#" class="nav-link" data-page="dashboard" aria-label="Счета партнера">
+                    <i class="fas fa-wallet" aria-hidden="true"></i> Счета
                 </a>
             </div>
         </nav>
@@ -80,20 +83,78 @@
                 </a>
             </div>
 
-            <!-- Статистика -->
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon stat-icon-success">
-                        <i class="fas fa-check-circle"></i>
+            <div class="dashboard-stats-grid">
+                <div class="stat-card stat-card-primary">
+                    <div class="stat-card-icon">
+                        <i class="fas fa-users"></i>
                     </div>
-                    <div class="stat-content">
-                        <div class="stat-label">Оформлено</div>
-                        <div class="stat-value" id="stat-processed">
-                            <span id="stat-processed-count">-</span>
-                            <span class="stat-percent" id="stat-processed-percent">(-%)</span>
-                        </div>
+                    <div class="stat-card-content">
+                        <div class="stat-card-label">Всего сотрудников</div>
+                        <div class="stat-card-value" id="stat-total-employees">0</div>
                     </div>
                 </div>
+
+                <div class="stat-card stat-card-success">
+                    <div class="stat-card-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stat-card-content">
+                        <div class="stat-card-label">Оформлено</div>
+                        <div class="stat-card-value" id="stat-processed-employees">0</div>
+                        <div class="stat-card-percent" id="stat-db-processed-percent">0%</div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-card-warning">
+                    <div class="stat-card-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="stat-card-content">
+                        <div class="stat-card-label">В обработке</div>
+                        <div class="stat-card-value" id="stat-in-process-employees">0</div>
+                        <div class="stat-card-percent" id="stat-in-process-percent">0%</div>
+                    </div>
+                </div>
+
+                <div class="stat-card stat-card-danger">
+                    <div class="stat-card-icon">
+                        <i class="fas fa-user-times"></i>
+                    </div>
+                    <div class="stat-card-content">
+                        <div class="stat-card-label">Уволено</div>
+                        <div class="stat-card-value" id="stat-dismissed-employees">0</div>
+                        <div class="stat-card-percent" id="stat-dismissed-percent">0%</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-row">
+                <div class="dashboard-section dashboard-section-half">
+                    <h2><i class="fas fa-chart-pie"></i> Статусы оформления</h2>
+                    <div class="chart-container chart-container-small">
+                        <canvas id="status-chart"></canvas>
+                    </div>
+                </div>
+
+                <div class="dashboard-section dashboard-section-half">
+                    <h2><i class="fas fa-briefcase"></i> Распределение по должностям</h2>
+                    <div class="chart-container chart-container-small">
+                        <canvas id="position-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="dashboard-row">
+                <div class="dashboard-section dashboard-section-full">
+                    <h2><i class="fas fa-store"></i> Статистика по ресторанам</h2>
+                    <div class="chart-container">
+                        <canvas id="restaurant-chart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Полезные материалы -->
+            <div class="stats-grid">
                 <a href="https://b24-usmnym.bitrix24shop.ru/oformlenie/" target="_blank" class="stat-card stat-card-link">
                     <div class="stat-icon stat-icon-primary">
                         <i class="fas fa-file-alt"></i>
@@ -118,8 +179,8 @@
         <!-- Экран выплат (бывший main-screen) -->
         <div id="payments-screen" class="screen hidden">
             <header>
-                <h1><i class="fas fa-money-check-alt"></i> Статусы выплат сотрудникам</h1>
-                <p class="subtitle">Обновляется автоматически из Google Таблицы. Ожидайте обновление при перезагрузке страницы (2-3 минуты)</p>
+                <h1><i class="fas fa-money-check-alt"></i> Выплаты сотрудникам</h1>
+                <p class="subtitle">Здесь видно, кому, за какой период и в каком статусе идет выплата. Данные подтягиваются из таблицы автоматически.</p>
             </header>
 
             <!-- Индикатор режима -->
@@ -325,21 +386,21 @@
             </div>
         </div>
 
-        <!-- Экран дашборда -->
+        <!-- Экран счетов -->
         <div id="dashboard-screen" class="screen hidden">
             <header>
-                <h1><i class="fas fa-chart-bar"></i> Дашборд управления</h1>
-                <p class="subtitle">Аналитика и статистика</p>
+                <h1><i class="fas fa-wallet"></i> Счета</h1>
+                <p class="subtitle">Здесь собраны счета по периодам, суммы к оплате, уже оплаченные суммы и история оплат.</p>
             </header>
 
             <!-- Раздел счетов -->
             <div class="dashboard-section accounts-section">
-                <h2><i class="fas fa-wallet"></i> Контроль счетов</h2>
+                <h2><i class="fas fa-wallet"></i> Сводка по счетам</h2>
                 
-                <!-- Таблица выплат -->
+                <!-- Таблица счетов -->
                 <div class="payments-table-section">
                     <div class="section-header">
-                        <h3><i class="fas fa-table"></i> Выплаты</h3>
+                        <h3><i class="fas fa-table"></i> Счета по периодам</h3>
                         <button id="export-payments-csv" class="btn btn-secondary" style="display:none;">
                             <i class="fas fa-download"></i> Скачать CSV
                         </button>
@@ -404,82 +465,6 @@
                                 </tbody>
                             </table>
                         </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Карточки с ключевыми метриками -->
-            <div class="dashboard-stats-grid">
-                <div class="stat-card stat-card-primary">
-                    <div class="stat-card-icon">
-                        <i class="fas fa-users"></i>
-                    </div>
-                    <div class="stat-card-content">
-                        <div class="stat-card-label">Всего сотрудников</div>
-                        <div class="stat-card-value" id="stat-total-employees">0</div>
-                    </div>
-                </div>
-                
-                <div class="stat-card stat-card-success">
-                    <div class="stat-card-icon">
-                        <i class="fas fa-check-circle"></i>
-                    </div>
-                    <div class="stat-card-content">
-                        <div class="stat-card-label">Оформлено</div>
-                        <div class="stat-card-value" id="stat-processed-employees">0</div>
-                        <div class="stat-card-percent" id="stat-db-processed-percent">0%</div>
-                    </div>
-                </div>
-                
-                <div class="stat-card stat-card-warning">
-                    <div class="stat-card-icon">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                    <div class="stat-card-content">
-                        <div class="stat-card-label">В обработке</div>
-                        <div class="stat-card-value" id="stat-in-process-employees">0</div>
-                        <div class="stat-card-percent" id="stat-in-process-percent">0%</div>
-                    </div>
-                </div>
-                
-                <div class="stat-card stat-card-danger">
-                    <div class="stat-card-icon">
-                        <i class="fas fa-user-times"></i>
-                    </div>
-                    <div class="stat-card-content">
-                        <div class="stat-card-label">Уволено</div>
-                        <div class="stat-card-value" id="stat-dismissed-employees">0</div>
-                        <div class="stat-card-percent" id="stat-dismissed-percent">0%</div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Первая строка графиков -->
-            <div class="dashboard-row">
-                <!-- Статистика по статусам оформления -->
-                <div class="dashboard-section dashboard-section-half">
-                    <h2><i class="fas fa-chart-pie"></i> Статусы оформления</h2>
-                    <div class="chart-container chart-container-small">
-                        <canvas id="status-chart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Распределение по должностям -->
-                <div class="dashboard-section dashboard-section-half">
-                    <h2><i class="fas fa-briefcase"></i> Распределение по должностям</h2>
-                    <div class="chart-container chart-container-small">
-                        <canvas id="position-chart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Вторая строка графиков -->
-            <div class="dashboard-row">
-                <!-- Статистика по ресторанам -->
-                <div class="dashboard-section dashboard-section-full">
-                    <h2><i class="fas fa-store"></i> Статистика по ресторанам</h2>
-                    <div class="chart-container">
-                        <canvas id="restaurant-chart"></canvas>
                     </div>
                 </div>
             </div>
