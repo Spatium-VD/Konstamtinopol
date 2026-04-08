@@ -38,7 +38,7 @@ function updateDashboardStats() {
     // Обновляем значения
     const totalEl = document.getElementById('stat-total-employees');
     const processedEl = document.getElementById('stat-processed-employees');
-    const processedPercentEl = document.getElementById('stat-processed-percent');
+    const processedPercentEl = document.getElementById('stat-db-processed-percent');
     const inProcessEl = document.getElementById('stat-in-process-employees');
     const inProcessPercentEl = document.getElementById('stat-in-process-percent');
     const dismissedEl = document.getElementById('stat-dismissed-employees');

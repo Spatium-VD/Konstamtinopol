@@ -134,11 +134,23 @@ function renderTable() {
     }
     
     if (filteredPayments.length === 0) {
+        // Определяем причину: нет данных вообще или активны фильтры
+        const hasActiveFilters = (elements.periodYearFilter && elements.periodYearFilter.value) ||
+            (elements.statusFilter && elements.statusFilter.value) ||
+            (elements.searchInput && elements.searchInput.value);
+        
+        const emptyIcon = hasActiveFilters ? 'fa-filter' : 'fa-inbox';
+        const emptyTitle = hasActiveFilters ? 'Нет данных по выбранным фильтрам' : 'Нет данных для отображения';
+        const emptyHint = hasActiveFilters
+            ? `<br><button class="btn btn-secondary" style="margin-top:12px;" onclick="resetFilters(); updateFilterActiveStates();"><i class="fas fa-redo"></i> Сбросить фильтры</button>`
+            : '';
+        
         elements.tableBody.innerHTML = `
             <tr>
-                <td colspan="8" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-search" style="font-size: 2rem; color: #bdc3c7; margin-bottom: 15px; display: block;"></i>
-                    <p>Нет данных, соответствующих фильтрам</p>
+                <td colspan="8" style="text-align: center; padding: 48px 20px;">
+                    <i class="fas ${emptyIcon}" style="font-size: 2.2rem; color: var(--gray-300); margin-bottom: 14px; display: block;"></i>
+                    <p style="color: var(--gray-500); font-size: 15px; font-weight: 500;">${emptyTitle}</p>
+                    ${emptyHint}
                 </td>
             </tr>
         `;
@@ -280,11 +292,25 @@ function renderDocumentsTable() {
     if (!elements.docTableBody) return;
     
     if (filteredDocuments.length === 0) {
+        // Определяем причину: нет данных вообще или активны фильтры
+        const hasActiveDocFilters = (elements.docStatusFilter && elements.docStatusFilter.value) ||
+            (elements.docPositionFilter && elements.docPositionFilter.value) ||
+            (elements.docRestaurantFilter && elements.docRestaurantFilter.value) ||
+            (elements.docProblemsFilter && elements.docProblemsFilter.value) ||
+            (elements.docSearchInput && elements.docSearchInput.value);
+        
+        const emptyIcon = hasActiveDocFilters ? 'fa-filter' : 'fa-inbox';
+        const emptyTitle = hasActiveDocFilters ? 'Нет данных по выбранным фильтрам' : 'Нет данных для отображения';
+        const emptyHint = hasActiveDocFilters
+            ? `<br><button class="btn btn-secondary" style="margin-top:12px;" onclick="resetDocFilters(); updateDocFilterActiveStates();"><i class="fas fa-redo"></i> Сбросить фильтры</button>`
+            : '';
+        
         elements.docTableBody.innerHTML = `
             <tr>
-                <td colspan="6" style="text-align: center; padding: 40px;">
-                    <i class="fas fa-search" style="font-size: 2rem; color: #bdc3c7; margin-bottom: 15px; display: block;"></i>
-                    <p>Нет данных, соответствующих фильтрам</p>
+                <td colspan="6" style="text-align: center; padding: 48px 20px;">
+                    <i class="fas ${emptyIcon}" style="font-size: 2.2rem; color: var(--gray-300); margin-bottom: 14px; display: block;"></i>
+                    <p style="color: var(--gray-500); font-size: 15px; font-weight: 500;">${emptyTitle}</p>
+                    ${emptyHint}
                 </td>
             </tr>
         `;

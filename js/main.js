@@ -204,18 +204,18 @@ function setupEventListeners() {
     });
     
     // Фильтры выплат (проверяем существование элементов)
-    if (elements.periodYearFilter) elements.periodYearFilter.addEventListener('change', applyFilters);
-    if (elements.statusFilter) elements.statusFilter.addEventListener('change', applyFilters);
-    if (elements.searchInput) elements.searchInput.addEventListener('input', debounce(applyFilters, 300));
-    if (elements.resetFiltersBtn) elements.resetFiltersBtn.addEventListener('click', resetFilters);
+    if (elements.periodYearFilter) elements.periodYearFilter.addEventListener('change', () => { applyFilters(); updateFilterActiveStates(); });
+    if (elements.statusFilter) elements.statusFilter.addEventListener('change', () => { applyFilters(); updateFilterActiveStates(); });
+    if (elements.searchInput) elements.searchInput.addEventListener('input', debounce(() => { applyFilters(); updateFilterActiveStates(); }, 300));
+    if (elements.resetFiltersBtn) elements.resetFiltersBtn.addEventListener('click', () => { resetFilters(); updateFilterActiveStates(); });
     
     // Фильтры документов
-    if (elements.docStatusFilter) elements.docStatusFilter.addEventListener('change', applyDocFilters);
-    if (elements.docPositionFilter) elements.docPositionFilter.addEventListener('change', applyDocFilters);
-    if (elements.docRestaurantFilter) elements.docRestaurantFilter.addEventListener('change', applyDocFilters);
-    if (elements.docProblemsFilter) elements.docProblemsFilter.addEventListener('change', applyDocFilters);
-    if (elements.docSearchInput) elements.docSearchInput.addEventListener('input', debounce(applyDocFilters, 300));
-    if (elements.docResetFiltersBtn) elements.docResetFiltersBtn.addEventListener('click', resetDocFilters);
+    if (elements.docStatusFilter) elements.docStatusFilter.addEventListener('change', () => { applyDocFilters(); updateDocFilterActiveStates(); });
+    if (elements.docPositionFilter) elements.docPositionFilter.addEventListener('change', () => { applyDocFilters(); updateDocFilterActiveStates(); });
+    if (elements.docRestaurantFilter) elements.docRestaurantFilter.addEventListener('change', () => { applyDocFilters(); updateDocFilterActiveStates(); });
+    if (elements.docProblemsFilter) elements.docProblemsFilter.addEventListener('change', () => { applyDocFilters(); updateDocFilterActiveStates(); });
+    if (elements.docSearchInput) elements.docSearchInput.addEventListener('input', debounce(() => { applyDocFilters(); updateDocFilterActiveStates(); }, 300));
+    if (elements.docResetFiltersBtn) elements.docResetFiltersBtn.addEventListener('click', () => { resetDocFilters(); updateDocFilterActiveStates(); });
     
     if (elements.docRetryBtn) elements.docRetryBtn.addEventListener('click', loadData);
     
@@ -366,3 +366,31 @@ function generateTestData() {
 
 // Глобальная функция для выхода из режима
 window.exitMode = exitMode;
+
+// Обновление визуального состояния активных фильтров выплат
+function updateFilterActiveStates() {
+    const toggleActive = (el) => {
+        if (!el) return;
+        const hasValue = el.value && el.value !== '';
+        el.classList.toggle('filter-active', !!hasValue);
+    };
+    
+    toggleActive(elements.periodYearFilter);
+    toggleActive(elements.statusFilter);
+    toggleActive(elements.searchInput);
+}
+
+// Обновление визуального состояния активных фильтров документов
+function updateDocFilterActiveStates() {
+    const toggleActive = (el) => {
+        if (!el) return;
+        const hasValue = el.value && el.value !== '';
+        el.classList.toggle('filter-active', !!hasValue);
+    };
+    
+    toggleActive(elements.docStatusFilter);
+    toggleActive(elements.docPositionFilter);
+    toggleActive(elements.docRestaurantFilter);
+    toggleActive(elements.docProblemsFilter);
+    toggleActive(elements.docSearchInput);
+}
