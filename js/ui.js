@@ -1308,7 +1308,7 @@ function renderDetoursTable() {
 
     if (rows.length === 0) {
         tbody.innerHTML =
-            '<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--gray-600);">Нет заявок по фильтру. Создайте новую через кнопку выше.</td></tr>';
+            '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--gray-600);">Нет заявок по фильтру. Создайте новую через кнопку выше.</td></tr>';
         return;
     }
 
@@ -1352,9 +1352,7 @@ function renderDetoursTable() {
         <td>${escapeHtmlDetour(d.restaurant)}</td>
         <td>${escapeHtmlDetour(d.director)}</td>
         <td>${empCell}</td>
-        <td>${escapeHtmlDetour(d.employeeInn)}</td>
         <td title="${escapeHtmlDetour(reason)}">${shortReason}</td>
-        <td>${escapeHtmlDetour(formatDateRussian(d.plannedVisitDate || '') || d.plannedVisitDate || '')}</td>
         <td><span class="status-badge status-badge-neutral">${escapeHtmlDetour(d.status || '')}</span></td>
         <td>${escapeHtmlDetour(formatDateRussian(d.contractDeliveryDate || '') || d.contractDeliveryDate || '')}</td>
         ${adminCell}
