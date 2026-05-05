@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Генерирует CSV для листа «Объезды» (колонки как в appscript.js)."""
+"""Генерирует CSV для листа «Объезды» v2 (совпадает с appscript DETOURS_HEADERS)."""
 import csv
 from datetime import datetime, timedelta
 
@@ -9,28 +9,24 @@ HEADERS = [
     "restaurant",
     "director",
     "employeeName",
-    "employeePhone",
     "employeeInn",
-    "contractType",
     "paperReason",
     "plannedVisitDate",
-    "desiredDeliveryDate",
     "status",
     "adminDeadline",
     "adminComment",
+    "contractDeliveryDate",
     "updatedAt",
 ]
 
 
 def map_legacy(code):
-    """Соответствие ваших кодов учёта статусам в панели."""
+    """Ваши коды → статусы в панели."""
     s = str(code).strip().lower()
     if s == "2":
-        return "Доставлено"  # всё ок у сотрудника и договор на точке
-    if s == "1":
-        return "Доставлено в офис"  # бумага в офисе / промежуточно, не финал точки
-    if s == "1?":
-        return "В работе"  # заказано / в пути, ещё не довезено
+        return "Доставлено"
+    if s == "1" or s == "1?":
+        return "Доставлено*"
     if s == "0":
         return "Новая"
     if "уехал" in s:
@@ -38,10 +34,14 @@ def map_legacy(code):
     return "В работе"
 
 
+def fmt_ru(dt):
+    return dt.strftime("%d.%m.%Y")
+
+
 def main():
     src = "obyezdy_migracija_source.tsv"
     out_path = "obyezdy_migracija_google.csv"
-    base = datetime(2026, 3, 15, 9, 0, 0)
+    base = datetime(2026, 3, 15)
 
     with open(src, encoding="utf-8") as f:
         rows = list(csv.reader(f, delimiter="\t"))
@@ -58,30 +58,27 @@ def main():
             metro = (metro or "").strip()
             status = map_legacy(legacy)
             n += 1
-            rid = f"M{n}"  # префикс M(migration), чтобы не пересечься с живыми D1…
-            ca = (base + timedelta(hours=n)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
-            pv = (base + timedelta(days=5 + (n % 20))).strftime("%Y-%m-%d")
-            dd = (base + timedelta(days=12 + (n % 25))).strftime("%Y-%m-%d")
-            dl = "" if status in ("Доставлено", "Отменено") else (base + timedelta(days=30)).strftime("%Y-%m-%d")
+            rid = f"M{n}"
+            created = fmt_ru(base + timedelta(days=n))
+            planned = fmt_ru(base + timedelta(days=5 + (n % 20)))
+            dl = "" if status in ("Доставлено", "Отменено", "Доставлено*") else fmt_ru(base + timedelta(days=40))
             paper = f"Метро: {metro}" if metro else "Миграция из списка учёта"
             comment = f"Импорт из ручного списка; код учёта: {legacy.strip()}"
             w.writerow(
                 [
                     rid,
-                    ca,
+                    created,
                     restaurant,
                     "Импорт (список)",
                     fio,
-                    "",
                     inn,
-                    "Трудовой",
                     paper,
-                    pv,
-                    dd,
+                    planned,
                     status,
                     dl,
                     comment,
-                    ca,
+                    "",
+                    created,
                 ]
             )
 

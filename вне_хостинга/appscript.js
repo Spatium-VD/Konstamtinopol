@@ -12,22 +12,21 @@ var DOCUMENTS_SHEET_NAME = 'Документы';
 var ACCOUNTS_SHEET_NAME = 'Счета';
 var DETOURS_SHEET_NAME = 'Объезды';
 
-// Заголовки листа "Объезды" (порядок колонок A..O)
+// Заголовки листа «Объезды» v2 (порядок колонок A…M): без телефона/типа договора/желаемой даты — правьте в Google Таблице при необходимости.
+// Колонка «Дата доставки договора» — для формул/ручного ввода в GT; в JSON поле contractDeliveryDate.
 var DETOURS_HEADERS = [
   'id',
   'createdAt',
   'restaurant',
   'director',
   'employeeName',
-  'employeePhone',
   'employeeInn',
-  'contractType',
   'paperReason',
   'plannedVisitDate',
-  'desiredDeliveryDate',
   'status',
   'adminDeadline',
   'adminComment',
+  'Дата доставки договора',
   'updatedAt'
 ];
 
@@ -528,7 +527,8 @@ function ensureDetoursSheet_(spreadsheet) {
   if (!sh) {
     sh = spreadsheet.insertSheet(DETOURS_SHEET_NAME);
   }
-  var first = sh.getRange(1, 1, 1, DETOURS_HEADERS.length).getValues()[0];
+  var width = Math.max(DETOURS_HEADERS.length, sh.getLastColumn() || 0, 1);
+  var first = sh.getRange(1, 1, 1, width).getValues()[0];
   var empty = true;
   for (var i = 0; i < first.length; i++) {
     if (String(first[i] || '').trim() !== '') {
@@ -555,28 +555,85 @@ function createDetoursSheet() {
   }
   sh.getRange(1, 1, 1, DETOURS_HEADERS.length).setValues([DETOURS_HEADERS]);
   sh.setFrozenRows(1);
-  var msg = 'Готово: лист «' + DETOURS_SHEET_NAME + '», заголовки A1:O1.';
+  var msg = 'Готово: лист «' + DETOURS_SHEET_NAME + '», заголовки A1:M1 (v2, 13 колонок).';
   Logger.log(msg);
   return msg;
+}
+
+function detoursHeadersRow_(sheet) {
+  var lc = sheet.getLastColumn();
+  var lr = sheet.getLastRow();
+  if (lr < 1 || lc < 1) return DETOURS_HEADERS.slice();
+  return sheet.getRange(1, 1, 1, lc).getValues()[0];
+}
+
+function detoursHeaderToKey_(cell) {
+  var raw = String(cell || '').trim();
+  if (!raw) return '';
+  var compact = raw.toLowerCase().replace(/\s+/g, '').replace(/ё/g, 'е');
+  var map = {
+    'id': 'id',
+    'createdat': 'createdAt',
+    'restaurant': 'restaurant',
+    'director': 'director',
+    'employeename': 'employeeName',
+    'employeephone': 'employeePhone',
+    'телефон': 'employeePhone',
+    'employeeinn': 'employeeInn',
+    'инн': 'employeeInn',
+    'contracttype': 'contractType',
+    'типдоговора': 'contractType',
+    'paperreason': 'paperReason',
+    'зачембумага': 'paperReason',
+    'plannedvisitdate': 'plannedVisitDate',
+    'визит': 'plannedVisitDate',
+    'визитворган': 'plannedVisitDate',
+    'desireddeliverydate': 'desiredDeliveryDate',
+    'желаемаядоставка': 'desiredDeliveryDate',
+    'status': 'status',
+    'статус': 'status',
+    'admindeadline': 'adminDeadline',
+    'admincomment': 'adminComment',
+    'updatedat': 'updatedAt',
+    'contractdeliverydate': 'contractDeliveryDate',
+    'датадоставкидоговора': 'contractDeliveryDate'
+  };
+  return map[compact] || '';
+}
+
+function detoursColIndexByKey_(sheet, key) {
+  var headers = detoursHeadersRow_(sheet);
+  for (var i = 0; i < headers.length; i++) {
+    if (detoursHeaderToKey_(headers[i]) === key) return i + 1;
+  }
+  return -1;
+}
+
+function formatDetourValueOut_(val, key) {
+  if (val === undefined || val === null || val === '') return '';
+  if (val instanceof Date) {
+    if (key === 'createdAt' || key === 'updatedAt') {
+      return Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
+    }
+    return Utilities.formatDate(val, Session.getScriptTimeZone(), 'dd.MM.yyyy');
+  }
+  return String(val);
 }
 
 function readDetoursAsObjects_(sheet) {
   if (!sheet) return [];
   var values = sheet.getDataRange().getValues();
   if (values.length < 2) return [];
-  var headers = values[0];
+  var headerRow = values[0];
   var out = [];
   for (var r = 1; r < values.length; r++) {
     var row = values[r];
     var obj = {};
-    for (var c = 0; c < DETOURS_HEADERS.length; c++) {
-      var key = DETOURS_HEADERS[c];
-      obj[key] = row[c] !== undefined && row[c] !== null ? row[c] : '';
-      if (obj[key] instanceof Date) {
-        obj[key] = Utilities.formatDate(obj[key], Session.getScriptTimeZone(), 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
-      } else {
-        obj[key] = String(obj[key]);
-      }
+    for (var c = 0; c < headerRow.length; c++) {
+      var key = detoursHeaderToKey_(headerRow[c]);
+      if (!key) continue;
+      var v = row[c];
+      obj[key] = formatDetourValueOut_(v === undefined || v === null ? '' : v, key);
     }
     if (String(obj.id || '').trim() !== '') {
       out.push(obj);
@@ -601,43 +658,70 @@ function nextDetourId_(sheet) {
   return 'D' + (maxNum + 1);
 }
 
+function detoursAppendCell_(key, id, payload, nowIso) {
+  if (!key) return '';
+  switch (key) {
+    case 'id':
+      return id;
+    case 'createdAt':
+    case 'updatedAt':
+      return nowIso;
+    case 'restaurant':
+      return String(payload.restaurant || '');
+    case 'director':
+      return String(payload.director || '');
+    case 'employeeName':
+      return String(payload.employeeName || '');
+    case 'employeeInn':
+      return String(payload.employeeInn || '');
+    case 'paperReason':
+      return String(payload.paperReason || '');
+    case 'plannedVisitDate':
+      return formatDateOrEmpty_(payload.plannedVisitDate);
+    case 'status':
+      return 'Новая';
+    case 'adminDeadline':
+      return '';
+    case 'adminComment':
+      return '';
+    case 'contractDeliveryDate':
+      return '';
+    // Старые листы с лишними колонками — заполняем из payload, если были
+    case 'employeePhone':
+      return String(payload.employeePhone || '');
+    case 'contractType':
+      return String(payload.contractType || '');
+    case 'desiredDeliveryDate':
+      return formatDateOrEmpty_(payload.desiredDeliveryDate);
+    default:
+      return '';
+  }
+}
+
 function appendDetourRow_(sheet, payload) {
   var nowIso = new Date().toISOString();
   var id = nextDetourId_(sheet);
-  var row = [
-    id,
-    nowIso,
-    String(payload.restaurant || ''),
-    String(payload.director || ''),
-    String(payload.employeeName || ''),
-    String(payload.employeePhone || ''),
-    String(payload.employeeInn || ''),
-    String(payload.contractType || ''),
-    String(payload.paperReason || ''),
-    formatDateOrEmpty_(payload.plannedVisitDate),
-    formatDateOrEmpty_(payload.desiredDeliveryDate),
-    'Новая',
-    '',
-    '',
-    nowIso
-  ];
+  var headers = detoursHeadersRow_(sheet);
+  var row = [];
+  for (var i = 0; i < headers.length; i++) {
+    var k = detoursHeaderToKey_(headers[i]);
+    row.push(detoursAppendCell_(k, id, payload, nowIso));
+  }
   sheet.appendRow(row);
   return {
     id: id,
-    createdAt: row[1],
-    restaurant: row[2],
-    director: row[3],
-    employeeName: row[4],
-    employeePhone: row[5],
-    employeeInn: row[6],
-    contractType: row[7],
-    paperReason: row[8],
-    plannedVisitDate: row[9],
-    desiredDeliveryDate: row[10],
-    status: row[11],
-    adminDeadline: row[12],
-    adminComment: row[13],
-    updatedAt: row[14]
+    createdAt: nowIso,
+    restaurant: String(payload.restaurant || ''),
+    director: String(payload.director || ''),
+    employeeName: String(payload.employeeName || ''),
+    employeeInn: String(payload.employeeInn || ''),
+    paperReason: String(payload.paperReason || ''),
+    plannedVisitDate: formatDateOrEmpty_(payload.plannedVisitDate),
+    status: 'Новая',
+    adminDeadline: '',
+    adminComment: '',
+    contractDeliveryDate: '',
+    updatedAt: nowIso
   };
 }
 
@@ -661,16 +745,21 @@ function updateDetourRow_(sheet, payload) {
   }
   if (rowIndex < 2) throw new Error('row_not_found');
   var nowIso = new Date().toISOString();
+  var col;
   if (payload.status !== undefined) {
-    sheet.getRange(rowIndex, 12).setValue(String(payload.status));
+    col = detoursColIndexByKey_(sheet, 'status');
+    if (col > 0) sheet.getRange(rowIndex, col).setValue(String(payload.status));
   }
   if (payload.adminDeadline !== undefined) {
-    sheet.getRange(rowIndex, 13).setValue(String(payload.adminDeadline));
+    col = detoursColIndexByKey_(sheet, 'adminDeadline');
+    if (col > 0) sheet.getRange(rowIndex, col).setValue(String(payload.adminDeadline));
   }
   if (payload.adminComment !== undefined) {
-    sheet.getRange(rowIndex, 14).setValue(String(payload.adminComment));
+    col = detoursColIndexByKey_(sheet, 'adminComment');
+    if (col > 0) sheet.getRange(rowIndex, col).setValue(String(payload.adminComment));
   }
-  sheet.getRange(rowIndex, 15).setValue(nowIso);
+  col = detoursColIndexByKey_(sheet, 'updatedAt');
+  if (col > 0) sheet.getRange(rowIndex, col).setValue(nowIso);
 }
 
 // Вспомогательная функция для поиска индекса колонки

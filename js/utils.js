@@ -91,6 +91,23 @@ function formatDateRussian(dateString) {
     return `${day}.${month}.${year}`;
 }
 
+/** Значение для <input type="date"> из DD.MM.YYYY, YYYY-MM-DD или ISO */
+function toDateInputValueFlexible(v) {
+    if (!v) return '';
+    const s = String(v).trim();
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(s)) {
+        const [dd, mm, yyyy] = s.split('.');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+    const ru = formatDateRussian(s);
+    if (/^\d{2}\.\d{2}\.\d{4}$/.test(ru)) {
+        const [dd, mm, yyyy] = ru.split('.');
+        return `${yyyy}-${mm}-${dd}`;
+    }
+    return '';
+}
+
 // Получить CSS класс для статуса
 function getStatusClass(status) {
     if (!status) return 'status-other';

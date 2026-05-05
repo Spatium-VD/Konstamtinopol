@@ -1308,7 +1308,7 @@ function renderDetoursTable() {
 
     if (rows.length === 0) {
         tbody.innerHTML =
-            '<tr><td colspan="13" style="text-align:center;padding:2rem;color:var(--gray-600);">Нет заявок по фильтру. Создайте новую через кнопку выше.</td></tr>';
+            '<tr><td colspan="11" style="text-align:center;padding:2rem;color:var(--gray-600);">Нет заявок по фильтру. Создайте новую через кнопку выше.</td></tr>';
         return;
     }
 
@@ -1323,7 +1323,12 @@ function renderDetoursTable() {
             const reason = d.paperReason || '';
             const shortReason =
                 reason.length > 100 ? escapeHtmlDetour(reason.slice(0, 100) + '…') : escapeHtmlDetour(reason);
-            const admDate = (d.adminDeadline || '').length >= 10 ? String(d.adminDeadline).slice(0, 10) : (d.adminDeadline || '');
+            const admDate = toDateInputValueFlexible(d.adminDeadline);
+            const innRaw = String(d.employeeInn || '').trim();
+            const nameEsc = escapeHtmlDetour(d.employeeName || '');
+            const empCell = innRaw
+                ? `<a href="#" class="employee-link" data-inn="${escapeHtmlDetour(innRaw)}">${nameEsc}</a>`
+                : nameEsc;
 
             let adminCell = '';
             if (isAdmin) {
@@ -1336,30 +1341,36 @@ function renderDetoursTable() {
           <button type="button" class="btn btn-small btn-primary detour-admin-save" data-detour-id="${id}">Сохранить</button>
         </td>`;
             } else {
-                adminCell = `<td><small>${escapeHtmlDetour(d.adminDeadline || '—')}</small><br><small>${escapeHtmlDetour(
+                adminCell = `<td><small>${formatDateRussian(d.adminDeadline || '') || escapeHtmlDetour(d.adminDeadline || '—')}</small><br><small>${escapeHtmlDetour(
                     d.adminComment || ''
                 )}</small></td>`;
             }
 
             return `<tr>
         <td><code>${id}</code></td>
-        <td><small>${escapeHtmlDetour(String(d.createdAt || '').slice(0, 16))}</small></td>
+        <td>${escapeHtmlDetour(formatDateRussian(d.createdAt || '') || '')}</td>
         <td>${escapeHtmlDetour(d.restaurant)}</td>
         <td>${escapeHtmlDetour(d.director)}</td>
-        <td>${escapeHtmlDetour(d.employeeName)}</td>
-        <td>${escapeHtmlDetour(d.employeePhone)}</td>
+        <td>${empCell}</td>
         <td>${escapeHtmlDetour(d.employeeInn)}</td>
-        <td>${escapeHtmlDetour(d.contractType)}</td>
         <td title="${escapeHtmlDetour(reason)}">${shortReason}</td>
-        <td>${escapeHtmlDetour(d.plannedVisitDate || '')}</td>
-        <td>${escapeHtmlDetour(d.desiredDeliveryDate || '')}</td>
+        <td>${escapeHtmlDetour(formatDateRussian(d.plannedVisitDate || '') || d.plannedVisitDate || '')}</td>
         <td><span class="status-badge status-badge-neutral">${escapeHtmlDetour(d.status || '')}</span></td>
+        <td>${escapeHtmlDetour(formatDateRussian(d.contractDeliveryDate || '') || d.contractDeliveryDate || '')}</td>
         ${adminCell}
       </tr>`;
         })
         .join('');
 
     tbody.innerHTML = html;
+
+    tbody.querySelectorAll('.employee-link[data-inn]').forEach(link => {
+        link.addEventListener('click', e => {
+            e.preventDefault();
+            const inn = link.getAttribute('data-inn');
+            if (inn) showEmployeeDetailsByINN(inn);
+        });
+    });
 
     if (isAdmin) {
         rows.forEach(d => {
