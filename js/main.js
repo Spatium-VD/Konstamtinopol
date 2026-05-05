@@ -288,10 +288,8 @@ function setupEventListeners() {
                     employeeName: emp.employee,
                     employeePhone: emp.phone,
                     employeeInn: emp.inn,
-                    contractType: document.getElementById('detour-contract-type').value.trim(),
                     paperReason: document.getElementById('detour-paper-reason').value.trim(),
-                    plannedVisitDate: document.getElementById('detour-planned-visit').value,
-                    desiredDeliveryDate: document.getElementById('detour-desired-delivery').value
+                    plannedVisitDate: document.getElementById('detour-planned-visit').value
                 };
                 await createDetourRequestApi(payload);
                 if (statusEl) statusEl.textContent = 'Заявка отправлена.';

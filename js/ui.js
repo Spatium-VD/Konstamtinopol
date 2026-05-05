@@ -1238,10 +1238,6 @@ function fillDetourDatalists() {
             .map(r => `<option value="${escapeHtmlDetour(r)}"></option>`)
             .join('');
     }
-    const cl = document.getElementById('detour-contract-list');
-    if (cl && CONFIG.detourContractTypeHints) {
-        cl.innerHTML = CONFIG.detourContractTypeHints.map(x => `<option value="${escapeHtmlDetour(x)}"></option>`).join('');
-    }
 }
 
 function openDetourModal() {
@@ -1262,15 +1258,13 @@ function openDetourModal() {
                 .join('');
     }
     fillDetourDatalists();
-    const ids = ['detour-restaurant', 'detour-director', 'detour-contract-type', 'detour-paper-reason'];
+    const ids = ['detour-restaurant', 'detour-director', 'detour-paper-reason'];
     ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.value = '';
     });
     const pv = document.getElementById('detour-planned-visit');
-    const dd = document.getElementById('detour-desired-delivery');
     if (pv) pv.value = '';
-    if (dd) dd.value = '';
     const st = document.getElementById('detour-form-status');
     if (st) st.textContent = '';
     modal.classList.remove('hidden');
