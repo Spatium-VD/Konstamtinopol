@@ -52,6 +52,15 @@ function showScreen(screenName, action = null) {
                 }, 100);
             }
             break;
+        case 'detours':
+            if (elements.detoursScreen) elements.detoursScreen.classList.remove('hidden');
+            if (typeof renderDetoursTable === 'function') {
+                renderDetoursTable();
+            }
+            if (typeof updateDetoursAdminHint === 'function') {
+                updateDetoursAdminHint();
+            }
+            break;
         case 'dashboard':
             // Проверяем пароль перед показом дашборда
             checkDashboardPassword();
@@ -1156,4 +1165,235 @@ function formatCurrency(amount) {
         minimumFractionDigits: 2,
         maximumFractionDigits: 2
     }).format(amount);
+}
+
+// ==================== Объезды (доставка договоров) ====================
+
+var _detourEmployeeList = [];
+
+function escapeHtmlDetour(s) {
+    if (s === undefined || s === null) return '';
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function updateDetoursAdminHint() {
+    const el = document.getElementById('detours-admin-hint');
+    if (!el) return;
+    const isAdmin = sessionStorage.getItem('dashboardAccessGranted') === 'true';
+    if (isAdmin) {
+        el.classList.remove('hidden');
+        el.textContent = 'Режим руководства: после входа по паролю дашборда вы можете менять статус, срок и комментарий по заявкам.';
+    } else {
+        el.classList.add('hidden');
+    }
+}
+
+function buildDetourEmployeeList() {
+    const map = new Map();
+    const keyOf = (inn, phone, name) => `${String(inn || '').trim()}|${normalizePhone(phone)}|${String(name || '').toLowerCase()}`;
+    (allPayments || []).forEach(p => {
+        const k = keyOf(p.inn, p.phone, p.employee);
+        if (!map.has(k)) {
+            map.set(k, {
+                employee: p.employee,
+                phone: normalizePhone(p.phone),
+                inn: (p.inn || '').toString().trim(),
+                restaurant: ''
+            });
+        }
+    });
+    (allDocuments || []).forEach(d => {
+        const name = d.employee || '';
+        const k = keyOf(d.inn, d.phone, name);
+        if (!map.has(k)) {
+            map.set(k, {
+                employee: name,
+                phone: normalizePhone(d.phone),
+                inn: (d.inn || '').toString().trim(),
+                restaurant: (d.restaurant || '').toString().trim()
+            });
+        } else {
+            const cur = map.get(k);
+            if (d.restaurant && !cur.restaurant) {
+                cur.restaurant = String(d.restaurant).trim();
+            }
+        }
+    });
+    return Array.from(map.values()).sort((a, b) => a.employee.localeCompare(b.employee, 'ru'));
+}
+
+function fillDetourDatalists() {
+    const dl = document.getElementById('detour-restaurant-list');
+    if (dl) {
+        const set = new Set();
+        (allDocuments || []).forEach(d => {
+            if (d.restaurant) set.add(String(d.restaurant).trim());
+        });
+        dl.innerHTML = Array.from(set)
+            .sort()
+            .map(r => `<option value="${escapeHtmlDetour(r)}"></option>`)
+            .join('');
+    }
+    const cl = document.getElementById('detour-contract-list');
+    if (cl && CONFIG.detourContractTypeHints) {
+        cl.innerHTML = CONFIG.detourContractTypeHints.map(x => `<option value="${escapeHtmlDetour(x)}"></option>`).join('');
+    }
+}
+
+function openDetourModal() {
+    const modal = document.getElementById('detour-modal');
+    if (!modal) return;
+    _detourEmployeeList = buildDetourEmployeeList();
+    const sel = document.getElementById('detour-employee-select');
+    if (sel) {
+        sel.innerHTML =
+            '<option value="">Выберите сотрудника из базы</option>' +
+            _detourEmployeeList
+                .map(
+                    (row, i) =>
+                        `<option value="${i}">${escapeHtmlDetour(row.employee)} — ${escapeHtmlDetour(row.phone)}${
+                            row.inn ? ' — ИНН ' + escapeHtmlDetour(row.inn) : ''
+                        }</option>`
+                )
+                .join('');
+    }
+    fillDetourDatalists();
+    const ids = ['detour-restaurant', 'detour-director', 'detour-contract-type', 'detour-paper-reason'];
+    ids.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    const pv = document.getElementById('detour-planned-visit');
+    const dd = document.getElementById('detour-desired-delivery');
+    if (pv) pv.value = '';
+    if (dd) dd.value = '';
+    const st = document.getElementById('detour-form-status');
+    if (st) st.textContent = '';
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+}
+
+function closeDetourModal() {
+    const modal = document.getElementById('detour-modal');
+    if (!modal) return;
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function renderDetoursTable() {
+    const tbody = document.getElementById('detours-table-body');
+    const filterEl = document.getElementById('detours-status-filter');
+    if (!tbody) return;
+    const isAdmin = sessionStorage.getItem('dashboardAccessGranted') === 'true';
+
+    if (filterEl && filterEl.options.length <= 1 && CONFIG.detourStatuses) {
+        CONFIG.detourStatuses.forEach(st => {
+            const o = document.createElement('option');
+            o.value = st;
+            o.textContent = st;
+            filterEl.appendChild(o);
+        });
+    }
+
+    let rows = Array.isArray(allDetours) ? [...allDetours] : [];
+    rows.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    const fv = filterEl ? filterEl.value : '';
+    if (fv) {
+        rows = rows.filter(r => String(r.status || '') === fv);
+    }
+
+    if (rows.length === 0) {
+        tbody.innerHTML =
+            '<tr><td colspan="13" style="text-align:center;padding:2rem;color:var(--gray-600);">Нет заявок по фильтру. Создайте новую через кнопку выше.</td></tr>';
+        return;
+    }
+
+    const statusOpts = (CONFIG.detourStatuses || [])
+        .map(s => `<option value="${escapeHtmlDetour(s)}">${escapeHtmlDetour(s)}</option>`)
+        .join('');
+
+    const html = rows
+        .map(d => {
+            const idRaw = String(d.id || '');
+            const id = escapeHtmlDetour(idRaw);
+            const reason = d.paperReason || '';
+            const shortReason =
+                reason.length > 100 ? escapeHtmlDetour(reason.slice(0, 100) + '…') : escapeHtmlDetour(reason);
+            const admDate = (d.adminDeadline || '').length >= 10 ? String(d.adminDeadline).slice(0, 10) : (d.adminDeadline || '');
+
+            let adminCell = '';
+            if (isAdmin) {
+                adminCell = `<td class="detour-admin-cell">
+          <select class="detour-admin-status" data-detour-id="${id}">${statusOpts}</select>
+          <input type="date" class="detour-admin-deadline" data-detour-id="${id}" value="${escapeHtmlDetour(admDate)}" />
+          <textarea class="detour-admin-comment" data-detour-id="${id}" placeholder="Комментарий руководства">${escapeHtmlDetour(
+                    d.adminComment || ''
+                )}</textarea>
+          <button type="button" class="btn btn-small btn-primary detour-admin-save" data-detour-id="${id}">Сохранить</button>
+        </td>`;
+            } else {
+                adminCell = `<td><small>${escapeHtmlDetour(d.adminDeadline || '—')}</small><br><small>${escapeHtmlDetour(
+                    d.adminComment || ''
+                )}</small></td>`;
+            }
+
+            return `<tr>
+        <td><code>${id}</code></td>
+        <td><small>${escapeHtmlDetour(String(d.createdAt || '').slice(0, 16))}</small></td>
+        <td>${escapeHtmlDetour(d.restaurant)}</td>
+        <td>${escapeHtmlDetour(d.director)}</td>
+        <td>${escapeHtmlDetour(d.employeeName)}</td>
+        <td>${escapeHtmlDetour(d.employeePhone)}</td>
+        <td>${escapeHtmlDetour(d.employeeInn)}</td>
+        <td>${escapeHtmlDetour(d.contractType)}</td>
+        <td title="${escapeHtmlDetour(reason)}">${shortReason}</td>
+        <td>${escapeHtmlDetour(d.plannedVisitDate || '')}</td>
+        <td>${escapeHtmlDetour(d.desiredDeliveryDate || '')}</td>
+        <td><span class="status-badge status-badge-neutral">${escapeHtmlDetour(d.status || '')}</span></td>
+        ${adminCell}
+      </tr>`;
+        })
+        .join('');
+
+    tbody.innerHTML = html;
+
+    if (isAdmin) {
+        rows.forEach(d => {
+            const id = String(d.id || '');
+            if (!id || !d.status) return;
+            tbody.querySelectorAll('.detour-admin-status').forEach(sel => {
+                if (sel.getAttribute('data-detour-id') === id) {
+                    sel.value = d.status;
+                }
+            });
+        });
+
+        tbody.querySelectorAll('.detour-admin-save').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const did = btn.getAttribute('data-detour-id');
+                const st = tbody.querySelector(`.detour-admin-status[data-detour-id="${did}"]`);
+                const dl = tbody.querySelector(`.detour-admin-deadline[data-detour-id="${did}"]`);
+                const cm = tbody.querySelector(`.detour-admin-comment[data-detour-id="${did}"]`);
+                btn.disabled = true;
+                try {
+                    await updateDetourRequestApi({
+                        id: did,
+                        status: st ? st.value : '',
+                        adminDeadline: dl ? dl.value : '',
+                        adminComment: cm ? cm.value : ''
+                    });
+                    await loadData();
+                } catch (err) {
+                    console.error(err);
+                    alert(err.message || 'Не удалось сохранить');
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        });
+    }
 }

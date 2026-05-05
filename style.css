@@ -1611,3 +1611,169 @@ footer {
 .table-wrapper::-webkit-scrollbar-thumb:hover {
     background: var(--gray-500);
 }
+
+/* --- Объезды: тулбар, таблица, модальное окно --- */
+.detours-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: flex-end;
+    margin-bottom: 20px;
+}
+
+.btn-detours-main {
+    padding: 14px 22px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    box-shadow: var(--shadow-md);
+}
+
+.status-badge-neutral {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: var(--gray-100);
+    color: var(--gray-800);
+    font-size: 12px;
+    font-weight: 600;
+}
+    color: var(--gray-600);
+    margin: 0 0 12px 0;
+    padding: 10px 14px;
+    background: var(--gray-100);
+    border-radius: 8px;
+    border-left: 3px solid var(--primary);
+}
+
+.detours-table-wrap {
+    overflow-x: auto;
+}
+
+#detours-table th,
+#detours-table td {
+    font-size: 13px;
+    vertical-align: top;
+}
+
+.detour-admin-cell {
+    min-width: 220px;
+}
+
+.detour-admin-cell select,
+.detour-admin-cell input[type="text"],
+.detour-admin-cell textarea {
+    width: 100%;
+    margin-bottom: 6px;
+    font-size: 12px;
+}
+
+.detour-admin-cell textarea {
+    min-height: 48px;
+    resize: vertical;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.modal-overlay.hidden {
+    display: none;
+}
+
+.modal-dialog {
+    background: var(--white);
+    border-radius: 12px;
+    max-width: 640px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: auto;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--gray-200);
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.15rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+    color: var(--gray-500);
+}
+
+.modal-close:hover {
+    color: var(--black);
+}
+
+.modal-body {
+    padding: 20px 22px;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 16px 22px;
+    border-top: 1px solid var(--gray-200);
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 18px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gray-700);
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    padding: 10px 12px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.detour-form-status {
+    margin-top: 12px;
+    font-size: 13px;
+    min-height: 1.2em;
+}
+
+@media (max-width: 720px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}

@@ -275,6 +275,21 @@ function processLoadedData(result) {
         console.error('Ошибка при слиянии данных:', error);
     }
     
+    // Обработка заявок «Объезды»
+    try {
+        if (result.detours && Array.isArray(result.detours)) {
+            allDetours = result.detours;
+        } else {
+            allDetours = [];
+        }
+        if (typeof renderDetoursTable === 'function') {
+            renderDetoursTable();
+        }
+    } catch (error) {
+        console.error('Ошибка при обработке объездов:', error);
+        allDetours = [];
+    }
+    
     // Обновляем статистику
     try {
         updateStatistics();
@@ -321,4 +336,52 @@ function processLoadedData(result) {
     if (hasErrors && (allPayments.length > 0 || allDocuments.length > 0)) {
         hideLoading();
     }
+}
+
+// --- Объезды: запросы к Google Apps Script (GET + base64 payload) ---
+function utf8ToBase64ForDetour(str) {
+    return btoa(unescape(encodeURIComponent(str)));
+}
+
+function buildGASDetourUrl(action, payloadObj) {
+    let base = CONFIG.appsScriptUrl;
+    const qIndex = base.indexOf('?');
+    if (qIndex >= 0) {
+        base = base.substring(0, qIndex);
+    }
+    const json = JSON.stringify(payloadObj);
+    const p = utf8ToBase64ForDetour(json);
+    return `${base}?action=${encodeURIComponent(action)}&p=${encodeURIComponent(p)}`;
+}
+
+async function createDetourRequestApi(payload) {
+    const url = buildGASDetourUrl('detourCreate', payload);
+    const response = await fetch(url);
+    const text = await response.text();
+    let result;
+    try {
+        result = JSON.parse(text);
+    } catch (e) {
+        throw new Error('Неверный ответ сервера');
+    }
+    if (!response.ok || result.success === false) {
+        throw new Error(result.error || `Ошибка HTTP: ${response.status}`);
+    }
+    return result;
+}
+
+async function updateDetourRequestApi(payload) {
+    const url = buildGASDetourUrl('detourUpdate', payload);
+    const response = await fetch(url);
+    const text = await response.text();
+    let result;
+    try {
+        result = JSON.parse(text);
+    } catch (e) {
+        throw new Error('Неверный ответ сервера');
+    }
+    if (!response.ok || result.success === false) {
+        throw new Error(result.error || `Ошибка HTTP: ${response.status}`);
+    }
+    return result;
 }

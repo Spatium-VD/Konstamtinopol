@@ -45,6 +45,9 @@
                 <a href="#" class="nav-link" data-page="documents">
                     <i class="fas fa-file-alt"></i> Документы
                 </a>
+                <a href="#" class="nav-link" data-page="detours">
+                    <i class="fas fa-route"></i> Объезды
+                </a>
                 <a href="#" class="nav-link" data-page="dashboard">
                     <i class="fas fa-chart-bar"></i> Дашборд
                 </a>
@@ -322,6 +325,105 @@
                 <i class="fas fa-exclamation-triangle"></i>
                 <p>Не удалось загрузить данные о документах. Пожалуйста, проверьте подключение и попробуйте позже.</p>
                 <button id="doc-retry-load" class="btn btn-small">Повторить загрузку</button>
+            </div>
+        </div>
+
+        <!-- Экран объездов (доставка бумажных договоров) -->
+        <div id="detours-screen" class="screen hidden">
+            <header>
+                <h1><i class="fas fa-route"></i> Объезды и доставка договоров</h1>
+                <p class="subtitle">Заявки на доставку бумажного договора сотруднику на точку</p>
+            </header>
+            <div class="detours-toolbar">
+                <button type="button" id="detours-new-btn" class="btn btn-primary btn-detours-main">
+                    <i class="fas fa-truck"></i> Запросить доставку договора
+                </button>
+                <div class="filter-group">
+                    <label for="detours-status-filter"><i class="fas fa-filter"></i> Статус:</label>
+                    <select id="detours-status-filter">
+                        <option value="">Все статусы</option>
+                    </select>
+                </div>
+                <button type="button" id="detours-reload-btn" class="btn btn-secondary">
+                    <i class="fas fa-sync-alt"></i> Обновить список
+                </button>
+            </div>
+            <p class="detours-hint hidden" id="detours-admin-hint"></p>
+            <div class="table-wrapper detours-table-wrap">
+                <table class="data-table" id="detours-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Создана</th>
+                            <th>Точка</th>
+                            <th>Кто запросил</th>
+                            <th>Сотрудник</th>
+                            <th>Телефон</th>
+                            <th>ИНН</th>
+                            <th>Тип договора</th>
+                            <th>Зачем бумага</th>
+                            <th>Визит в орган</th>
+                            <th>Желаемая доставка</th>
+                            <th>Статус</th>
+                            <th>Срок / комментарий (руководство)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="detours-table-body">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Модальное окно: новая заявка -->
+        <div id="detour-modal" class="modal-overlay hidden" aria-hidden="true">
+            <div class="modal-dialog" role="dialog" aria-labelledby="detour-modal-title">
+                <div class="modal-header">
+                    <h2 id="detour-modal-title"><i class="fas fa-file-signature"></i> Запрос доставки договора</h2>
+                    <button type="button" class="modal-close" id="detour-modal-close" aria-label="Закрыть">&times;</button>
+                </div>
+                <form id="detour-form" class="modal-body">
+                    <div class="form-grid">
+                        <div class="form-group full-width">
+                            <label for="detour-employee-select">Сотрудник (из базы) *</label>
+                            <select id="detour-employee-select" required>
+                                <option value="">Выберите сотрудника</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="detour-restaurant">Точка / ресторан *</label>
+                            <input type="text" id="detour-restaurant" list="detour-restaurant-list" required placeholder="Например, Чайхана …">
+                            <datalist id="detour-restaurant-list"></datalist>
+                        </div>
+                        <div class="form-group">
+                            <label for="detour-director">Кто запрашивает (ФИО) *</label>
+                            <input type="text" id="detour-director" required placeholder="Директор точки">
+                        </div>
+                        <div class="form-group">
+                            <label for="detour-contract-type">Тип договора *</label>
+                            <input type="text" id="detour-contract-type" list="detour-contract-list" required>
+                            <datalist id="detour-contract-list"></datalist>
+                        </div>
+                        <div class="form-group full-width">
+                            <label for="detour-paper-reason">Почему нужен бумажный договор *</label>
+                            <textarea id="detour-paper-reason" rows="3" required placeholder="Например, нет доступа к ЭДО, сроки визита …"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="detour-planned-visit">План: визит сотрудника в орган</label>
+                            <input type="date" id="detour-planned-visit">
+                        </div>
+                        <div class="form-group">
+                            <label for="detour-desired-delivery">Желаемая дата доставки на точку</label>
+                            <input type="date" id="detour-desired-delivery">
+                        </div>
+                    </div>
+                    <p class="detour-form-status" id="detour-form-status"></p>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" id="detour-form-cancel">Отмена</button>
+                        <button type="submit" class="btn btn-primary" id="detour-form-submit">
+                            <i class="fas fa-paper-plane"></i> Отправить заявку
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 

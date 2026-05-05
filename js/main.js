@@ -6,6 +6,7 @@ let allPayments = [];
 let filteredPayments = [];
 let allDocuments = [];
 let filteredDocuments = [];
+let allDetours = [];
 let accountsData = { payments: [], transactions: [] }; // Данные счетов
 let mergedData = {}; // Объединённые данные по телефонам
 let currentPage = 1;
@@ -80,6 +81,7 @@ function initializeDOMElements() {
     elements.paymentsScreen = document.getElementById('payments-screen');
     elements.documentsScreen = document.getElementById('documents-screen');
     elements.dashboardScreen = document.getElementById('dashboard-screen');
+    elements.detoursScreen = document.getElementById('detours-screen');
     elements.sosScreen = document.getElementById('sos-screen');
     elements.employeeScreen = document.getElementById('employee-screen');
     
@@ -242,6 +244,108 @@ function setupEventListeners() {
     if (elements.retryBtn) elements.retryBtn.addEventListener('click', loadData);
     if (elements.backButton) elements.backButton.addEventListener('click', showMainScreen);
     if (elements.exportCsvBtn) elements.exportCsvBtn.addEventListener('click', exportToCSV);
+    
+    // Объезды: кнопки, фильтр, модальное окно
+    const detoursNewBtn = document.getElementById('detours-new-btn');
+    if (detoursNewBtn) detoursNewBtn.addEventListener('click', () => openDetourModal());
+    const detoursReloadBtn = document.getElementById('detours-reload-btn');
+    if (detoursReloadBtn) detoursReloadBtn.addEventListener('click', () => loadData());
+    const detoursStatusFilter = document.getElementById('detours-status-filter');
+    if (detoursStatusFilter) {
+        detoursStatusFilter.addEventListener('change', () => {
+            if (typeof renderDetoursTable === 'function') renderDetoursTable();
+        });
+    }
+    const detourModalEl = document.getElementById('detour-modal');
+    const detourModalClose = document.getElementById('detour-modal-close');
+    const detourModalCancel = document.getElementById('detour-form-cancel');
+    if (detourModalClose) detourModalClose.addEventListener('click', () => closeDetourModal());
+    if (detourModalCancel) detourModalCancel.addEventListener('click', () => closeDetourModal());
+    if (detourModalEl) {
+        detourModalEl.addEventListener('click', (e) => {
+            if (e.target === detourModalEl) closeDetourModal();
+        });
+    }
+    const detourForm = document.getElementById('detour-form');
+    if (detourForm) {
+        detourForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const statusEl = document.getElementById('detour-form-status');
+            const sel = document.getElementById('detour-employee-select');
+            const idx = sel ? parseInt(sel.value, 10) : NaN;
+            if (typeof _detourEmployeeList === 'undefined' || isNaN(idx) || !_detourEmployeeList[idx]) {
+                if (statusEl) statusEl.textContent = 'Выберите сотрудника из базы.';
+                return;
+            }
+            const emp = _detourEmployeeList[idx];
+            const submitBtn = document.getElementById('detour-form-submit');
+            if (statusEl) statusEl.textContent = 'Отправка заявки...';
+            if (submitBtn) submitBtn.disabled = true;
+            try {
+                const payload = {
+                    restaurant: document.getElementById('detour-restaurant').value.trim(),
+                    director: document.getElementById('detour-director').value.trim(),
+                    employeeName: emp.employee,
+                    employeePhone: emp.phone,
+                    employeeInn: emp.inn,
+                    contractType: document.getElementById('detour-contract-type').value.trim(),
+                    paperReason: document.getElementById('detour-paper-reason').value.trim(),
+                    plannedVisitDate: document.getElementById('detour-planned-visit').value,
+                    desiredDeliveryDate: document.getElementById('detour-desired-delivery').value
+                };
+                await createDetourRequestApi(payload);
+                if (statusEl) statusEl.textContent = 'Заявка отправлена.';
+                closeDetourModal();
+                await loadData();
+            } catch (err) {
+                console.error(err);
+                if (statusEl) statusEl.textContent = err.message || 'Ошибка отправки';
+            } finally {
+                if (submitBtn) submitBtn.disabled = false;
+            }
+        });
+    }
+    const detourEmpSel = document.getElementById('detour-employee-select');
+    if (detourEmpSel) {
+        detourEmpSel.addEventListener('change', () => {
+            const i = parseInt(detourEmpSel.value, 10);
+            if (typeof _detourEmployeeList !== 'undefined' && !isNaN(i) && _detourEmployeeList[i] && _detourEmployeeList[i].restaurant) {
+                const rIn = document.getElementById('detour-restaurant');
+                if (rIn) rIn.value = _detourEmployeeList[i].restaurant;
+            }
+        });
+    }
+    
+    // Дашборд: обновить данные (только если задан dataApiUrl — серверная сборка)
+    const dashboardRefreshBtn = document.getElementById('dashboard-refresh-data');
+    if (dashboardRefreshBtn && CONFIG.dataApiUrl) {
+        dashboardRefreshBtn.addEventListener('click', async () => {
+            const btn = dashboardRefreshBtn;
+            const origText = btn.innerHTML;
+            if (window.location.protocol === 'file:') {
+                alert('Серверная версия должна открываться через сервер.\nЗапустите: npm start\nи откройте в браузере: http://localhost:3000');
+                return;
+            }
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Обновление…';
+            try {
+                const res = await fetch('/api/refresh', { method: 'POST' });
+                const json = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+                await loadData();
+                btn.innerHTML = '<i class="fas fa-check"></i> Готово';
+                setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 2000);
+            } catch (e) {
+                console.error('Ошибка обновления данных:', e);
+                const isNetworkError = e.message === 'Failed to fetch' || e.name === 'TypeError';
+                if (isNetworkError) {
+                    alert('Не удалось связаться с сервером. Убедитесь, что приложение открыто по адресу сервера (например http://localhost:3000), а не как файл.');
+                }
+                btn.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Ошибка';
+                setTimeout(() => { btn.innerHTML = origText; btn.disabled = false; }, 3000);
+            }
+        });
+    }
     
     // Сортировка таблицы
     document.querySelectorAll('#payments-table th[data-sort]').forEach(th => {

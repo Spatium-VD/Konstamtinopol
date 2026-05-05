@@ -10,12 +10,48 @@ var SPREADSHEET_ID = '1qqUSVi8zuWH0xFrN4FxSlDs-WTp3CPSgzH3N3oycwbk';
 var PAYMENTS_SHEET_NAME = 'Выплаты';
 var DOCUMENTS_SHEET_NAME = 'Документы';
 var ACCOUNTS_SHEET_NAME = 'Счета';
+var DETOURS_SHEET_NAME = 'Объезды';
+
+// Заголовки листа "Объезды" (порядок колонок A..O)
+var DETOURS_HEADERS = [
+  'id',
+  'createdAt',
+  'restaurant',
+  'director',
+  'employeeName',
+  'employeePhone',
+  'employeeInn',
+  'contractType',
+  'paperReason',
+  'plannedVisitDate',
+  'desiredDeliveryDate',
+  'status',
+  'adminDeadline',
+  'adminComment',
+  'updatedAt'
+];
 
 // Функция, вызываемая при GET запросе
 function doGet(e) {
   try {
     // Открываем таблицу
     var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    // --- API: заявки на объезды (GET + base64 JSON в параметре p) ---
+    if (e && e.parameter && e.parameter.action === 'detourCreate') {
+      ensureDetoursSheet_(spreadsheet);
+      var sheetD = spreadsheet.getSheetByName(DETOURS_SHEET_NAME);
+      var payload = decodePayload_(e.parameter.p);
+      var created = appendDetourRow_(sheetD, payload);
+      return jsonResponse_({ success: true, detour: created });
+    }
+    if (e && e.parameter && e.parameter.action === 'detourUpdate') {
+      ensureDetoursSheet_(spreadsheet);
+      var sheetU = spreadsheet.getSheetByName(DETOURS_SHEET_NAME);
+      var upd = decodePayload_(e.parameter.p);
+      updateDetourRow_(sheetU, upd);
+      return jsonResponse_({ success: true });
+    }
     
     // ===================== ЛИСТ ВЫПЛАТ =====================
     var paymentsSheet = spreadsheet.getSheetByName(PAYMENTS_SHEET_NAME);
@@ -406,6 +442,11 @@ function doGet(e) {
       }
     }
     
+    // ===================== ЛИСТ ОБЪЕЗДЫ =====================
+    ensureDetoursSheet_(spreadsheet);
+    var detoursSheet = spreadsheet.getSheetByName(DETOURS_SHEET_NAME);
+    var detoursData = readDetoursAsObjects_(detoursSheet);
+
     // Возвращаем данные
     return ContentService
       .createTextOutput(JSON.stringify({
@@ -413,6 +454,7 @@ function doGet(e) {
         data: paymentsData,
         documents: documentsData,
         accounts: accountsData,
+        detours: detoursData,
         timestamp: new Date().toISOString(),
         totalRecords: paymentsData.length,
         totalDocuments: documentsData.length
@@ -427,10 +469,189 @@ function doGet(e) {
         message: 'Ошибка при загрузке данных из Google Таблицы',
         data: [],
         documents: [],
-        accounts: { payments: [], transactions: [], breakdown: [] }
+        accounts: { payments: [], transactions: [], breakdown: [] },
+        detours: []
       }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+}
+
+/**
+ * POST: те же действия, что и GET с action + p (на случай длинных JSON).
+ */
+function doPost(e) {
+  try {
+    var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+    var body = {};
+    if (e.postData && e.postData.contents) {
+      body = JSON.parse(e.postData.contents);
+    }
+    var action = body.action;
+    var payload = body.payload || {};
+
+    if (action === 'detourCreate') {
+      ensureDetoursSheet_(spreadsheet);
+      var sheetD = spreadsheet.getSheetByName(DETOURS_SHEET_NAME);
+      var created = appendDetourRow_(sheetD, payload);
+      return jsonResponse_({ success: true, detour: created });
+    }
+    if (action === 'detourUpdate') {
+      ensureDetoursSheet_(spreadsheet);
+      var sheetU = spreadsheet.getSheetByName(DETOURS_SHEET_NAME);
+      updateDetourRow_(sheetU, payload);
+      return jsonResponse_({ success: true });
+    }
+    return jsonResponse_({ success: false, error: 'unknown_action' });
+  } catch (err) {
+    return jsonResponse_({ success: false, error: String(err) });
+  }
+}
+
+function jsonResponse_(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+}
+
+function decodePayload_(p) {
+  if (!p) throw new Error('empty_payload');
+  var s = String(p).trim().replace(/ /g, '+');
+  try {
+    var bytes = Utilities.base64Decode(s);
+    var jsonStr = Utilities.newBlob(bytes).getDataAsString('UTF-8');
+    return JSON.parse(jsonStr);
+  } catch (e1) {
+    return JSON.parse(decodeURIComponent(s));
+  }
+}
+
+function ensureDetoursSheet_(spreadsheet) {
+  var sh = spreadsheet.getSheetByName(DETOURS_SHEET_NAME);
+  if (!sh) {
+    sh = spreadsheet.insertSheet(DETOURS_SHEET_NAME);
+  }
+  var first = sh.getRange(1, 1, 1, DETOURS_HEADERS.length).getValues()[0];
+  var empty = true;
+  for (var i = 0; i < first.length; i++) {
+    if (String(first[i] || '').trim() !== '') {
+      empty = false;
+      break;
+    }
+  }
+  if (empty) {
+    sh.getRange(1, 1, 1, DETOURS_HEADERS.length).setValues([DETOURS_HEADERS]);
+  }
+}
+
+function readDetoursAsObjects_(sheet) {
+  if (!sheet) return [];
+  var values = sheet.getDataRange().getValues();
+  if (values.length < 2) return [];
+  var headers = values[0];
+  var out = [];
+  for (var r = 1; r < values.length; r++) {
+    var row = values[r];
+    var obj = {};
+    for (var c = 0; c < DETOURS_HEADERS.length; c++) {
+      var key = DETOURS_HEADERS[c];
+      obj[key] = row[c] !== undefined && row[c] !== null ? row[c] : '';
+      if (obj[key] instanceof Date) {
+        obj[key] = Utilities.formatDate(obj[key], Session.getScriptTimeZone(), 'yyyy-MM-dd\'T\'HH:mm:ss.SSS\'Z\'');
+      } else {
+        obj[key] = String(obj[key]);
+      }
+    }
+    if (String(obj.id || '').trim() !== '') {
+      out.push(obj);
+    }
+  }
+  return out;
+}
+
+function nextDetourId_(sheet) {
+  var last = sheet.getLastRow();
+  if (last < 2) return 'D1';
+  var maxNum = 0;
+  var ids = sheet.getRange(2, 1, last, 1).getValues();
+  for (var i = 0; i < ids.length; i++) {
+    var id = String(ids[i][0] || '').trim();
+    var m = id.match(/^D(\d+)$/);
+    if (m) {
+      var n = parseInt(m[1], 10);
+      if (n > maxNum) maxNum = n;
+    }
+  }
+  return 'D' + (maxNum + 1);
+}
+
+function appendDetourRow_(sheet, payload) {
+  var nowIso = new Date().toISOString();
+  var id = nextDetourId_(sheet);
+  var row = [
+    id,
+    nowIso,
+    String(payload.restaurant || ''),
+    String(payload.director || ''),
+    String(payload.employeeName || ''),
+    String(payload.employeePhone || ''),
+    String(payload.employeeInn || ''),
+    String(payload.contractType || ''),
+    String(payload.paperReason || ''),
+    formatDateOrEmpty_(payload.plannedVisitDate),
+    formatDateOrEmpty_(payload.desiredDeliveryDate),
+    'Новая',
+    '',
+    '',
+    nowIso
+  ];
+  sheet.appendRow(row);
+  return {
+    id: id,
+    createdAt: row[1],
+    restaurant: row[2],
+    director: row[3],
+    employeeName: row[4],
+    employeePhone: row[5],
+    employeeInn: row[6],
+    contractType: row[7],
+    paperReason: row[8],
+    plannedVisitDate: row[9],
+    desiredDeliveryDate: row[10],
+    status: row[11],
+    adminDeadline: row[12],
+    adminComment: row[13],
+    updatedAt: row[14]
+  };
+}
+
+function formatDateOrEmpty_(v) {
+  if (v === undefined || v === null || v === '') return '';
+  var s = String(v).trim();
+  if (!s) return '';
+  return s.length >= 10 ? s.substring(0, 10) : s;
+}
+
+function updateDetourRow_(sheet, payload) {
+  var id = String(payload.id || '').trim();
+  if (!id) throw new Error('missing_id');
+  var values = sheet.getDataRange().getValues();
+  var rowIndex = -1;
+  for (var r = 1; r < values.length; r++) {
+    if (String(values[r][0] || '').trim() === id) {
+      rowIndex = r + 1;
+      break;
+    }
+  }
+  if (rowIndex < 2) throw new Error('row_not_found');
+  var nowIso = new Date().toISOString();
+  if (payload.status !== undefined) {
+    sheet.getRange(rowIndex, 12).setValue(String(payload.status));
+  }
+  if (payload.adminDeadline !== undefined) {
+    sheet.getRange(rowIndex, 13).setValue(String(payload.adminDeadline));
+  }
+  if (payload.adminComment !== undefined) {
+    sheet.getRange(rowIndex, 14).setValue(String(payload.adminComment));
+  }
+  sheet.getRange(rowIndex, 15).setValue(nowIso);
 }
 
 // Вспомогательная функция для поиска индекса колонки
