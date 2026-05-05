@@ -538,7 +538,26 @@ function ensureDetoursSheet_(spreadsheet) {
   }
   if (empty) {
     sh.getRange(1, 1, 1, DETOURS_HEADERS.length).setValues([DETOURS_HEADERS]);
+    sh.setFrozenRows(1);
   }
+}
+
+/**
+ * Запуск из редактора Apps Script: меню «Выполнить» → выбрать createDetoursSheet → Run.
+ * Создаёт лист «Объезды» (если его нет), записывает заголовки в 1-ю строку и закрепляет её.
+ * Безопасно вызывать повторно: существующий лист не удаляется, строка заголовков перезаписывается.
+ */
+function createDetoursSheet() {
+  var spreadsheet = SpreadsheetApp.openById(SPREADSHEET_ID);
+  var sh = spreadsheet.getSheetByName(DETOURS_SHEET_NAME);
+  if (!sh) {
+    sh = spreadsheet.insertSheet(DETOURS_SHEET_NAME);
+  }
+  sh.getRange(1, 1, 1, DETOURS_HEADERS.length).setValues([DETOURS_HEADERS]);
+  sh.setFrozenRows(1);
+  var msg = 'Готово: лист «' + DETOURS_SHEET_NAME + '», заголовки A1:O1.';
+  Logger.log(msg);
+  return msg;
 }
 
 function readDetoursAsObjects_(sheet) {
