@@ -1724,6 +1724,15 @@ footer {
     vertical-align: top;
 }
 
+/* Чётче границы между строками: статус + кнопка самовывоза визуально «привязаны» к строке */
+#detours-table tbody tr {
+    border-bottom: 2px solid var(--gray-300);
+}
+
+#detours-table tbody tr:hover {
+    background: var(--gray-50);
+}
+
 .modal-overlay {
     position: fixed;
     inset: 0;
