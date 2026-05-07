@@ -1177,6 +1177,41 @@ function escapeHtmlDetour(s) {
         .replace(/"/g, '&quot;');
 }
 
+/** Класс бейджа статуса «Объезды» по тексту из таблицы */
+function getDetourStatusBadgeClass(statusRaw) {
+    const raw = String(statusRaw || '').trim();
+    const s = raw === 'Зпланировано' ? 'Запланировано' : raw;
+    if (s === 'Доставлено' || s === 'Доставлено*') return 'status-badge-detour-delivered';
+    if (s === 'Запланировано') return 'status-badge-detour-planned';
+    if (s === 'Договор готовится') return 'status-badge-detour-preparing';
+    if (s === 'Отменено') return 'status-badge-detour-cancelled';
+    return 'status-badge-neutral';
+}
+
+function isDetourStatusPickupPlanned(statusRaw) {
+    const t = String(statusRaw || '').trim();
+    return t === 'Запланировано' || t === 'Зпланировано';
+}
+
+function openDetourPickupInfoModal() {
+    const el = document.getElementById('detour-pickup-info-modal');
+    const link = document.getElementById('detour-pickup-maps-link');
+    if (link && typeof CONFIG !== 'undefined' && CONFIG.detourOfficeMapsUrl) {
+        link.href = CONFIG.detourOfficeMapsUrl;
+    }
+    if (!el) return;
+    el.classList.remove('hidden');
+    el.setAttribute('aria-hidden', 'false');
+}
+
+function closeDetourPickupInfoModal() {
+    const el = document.getElementById('detour-pickup-info-modal');
+    if (!el) return;
+    el.classList.add('hidden');
+    el.setAttribute('aria-hidden', 'true');
+}
+
+function buildDetourEmployeeList() {
     const map = new Map();
     const keyOf = (inn, phone, name) => `${String(inn || '').trim()}|${normalizePhone(phone)}|${String(name || '').toLowerCase()}`;
     (allPayments || []).forEach(p => {
@@ -1302,6 +1337,12 @@ function renderDetoursTable() {
                 ? `<a href="#" class="employee-link" data-inn="${escapeHtmlDetour(innRaw)}">${nameEsc}</a>`
                 : nameEsc;
 
+            const badgeClass = getDetourStatusBadgeClass(d.status);
+            const pickupBtn =
+                isDetourStatusPickupPlanned(d.status) ?
+                    '<button type="button" class="btn btn-secondary btn-small btn-detour-pickup-hint"><i class="fas fa-hand-holding"></i> Сотрудник заберёт договор сам</button>'
+                :   '';
+
             return `<tr>
         <td><code>${id}</code></td>
         <td>${escapeHtmlDetour(formatDateRussian(d.createdAt || '') || '')}</td>
@@ -1309,7 +1350,7 @@ function renderDetoursTable() {
         <td>${escapeHtmlDetour(d.director)}</td>
         <td>${empCell}</td>
         <td title="${escapeHtmlDetour(reason)}">${shortReason}</td>
-        <td><span class="status-badge status-badge-neutral">${escapeHtmlDetour(d.status || '')}</span></td>
+        <td class="detour-status-cell"><span class="${escapeHtmlDetour(badgeClass)}">${escapeHtmlDetour(d.status || '')}</span>${pickupBtn}</td>
         <td>${escapeHtmlDetour(formatDateRussian(d.contractDeliveryDate || '') || d.contractDeliveryDate || '')}</td>
       </tr>`;
         })
@@ -1323,5 +1364,9 @@ function renderDetoursTable() {
             const inn = link.getAttribute('data-inn');
             if (inn) showEmployeeDetailsByINN(inn);
         });
+    });
+
+    tbody.querySelectorAll('.btn-detour-pickup-hint').forEach(btn => {
+        btn.addEventListener('click', () => openDetourPickupInfoModal());
     });
 }

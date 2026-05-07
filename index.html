@@ -412,6 +412,28 @@
             </div>
         </div>
 
+        <!-- Подсказка: самовывоз договора со статусом «Запланировано» -->
+        <div id="detour-pickup-info-modal" class="modal-overlay hidden" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-detour-pickup" role="dialog" aria-labelledby="detour-pickup-info-title">
+                <div class="modal-header">
+                    <h2 id="detour-pickup-info-title"><i class="fas fa-building"></i> Самовывоз договора из офиса</h2>
+                    <button type="button" class="modal-close" id="detour-pickup-info-close" aria-label="Закрыть">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <p>Если сотрудник хочет <strong>сам забрать договор</strong>, сначала убедитесь в <strong>чате виджета снизу слева</strong> или в <strong>рабочем чате мессенджера</strong>, что договор уже <strong>находится в офисе</strong>.</p>
+                    <p>Там же можно согласовать детали. Маршрут до офиса на карте:</p>
+                    <p class="detour-pickup-modal-actions">
+                        <a id="detour-pickup-maps-link" class="btn btn-primary" href="#" target="_blank" rel="noopener noreferrer">
+                            <i class="fas fa-map-marked-alt"></i> Открыть маршрут в Яндекс.Картах
+                        </a>
+                    </p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" id="detour-pickup-info-dismiss">Понятно</button>
+                </div>
+            </div>
+        </div>
+
         <!-- Экран дашборда -->
         <div id="dashboard-screen" class="screen hidden">
             <header>

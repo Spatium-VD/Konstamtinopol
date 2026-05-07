@@ -313,6 +313,17 @@ function setupEventListeners() {
             }
         });
     }
+
+    const detourPickupModal = document.getElementById('detour-pickup-info-modal');
+    const detourPickupClose = document.getElementById('detour-pickup-info-close');
+    const detourPickupDismiss = document.getElementById('detour-pickup-info-dismiss');
+    if (detourPickupClose) detourPickupClose.addEventListener('click', () => closeDetourPickupInfoModal());
+    if (detourPickupDismiss) detourPickupDismiss.addEventListener('click', () => closeDetourPickupInfoModal());
+    if (detourPickupModal) {
+        detourPickupModal.addEventListener('click', e => {
+            if (e.target === detourPickupModal) closeDetourPickupInfoModal();
+        });
+    }
     
     // Дашборд: обновить данные (только если задан dataApiUrl — серверная сборка)
     const dashboardRefreshBtn = document.getElementById('dashboard-refresh-data');
