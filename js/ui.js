@@ -57,9 +57,6 @@ function showScreen(screenName, action = null) {
             if (typeof renderDetoursTable === 'function') {
                 renderDetoursTable();
             }
-            if (typeof updateDetoursAdminHint === 'function') {
-                updateDetoursAdminHint();
-            }
             break;
         case 'dashboard':
             // Проверяем пароль перед показом дашборда
@@ -1180,19 +1177,6 @@ function escapeHtmlDetour(s) {
         .replace(/"/g, '&quot;');
 }
 
-function updateDetoursAdminHint() {
-    const el = document.getElementById('detours-admin-hint');
-    if (!el) return;
-    const isAdmin = sessionStorage.getItem('dashboardAccessGranted') === 'true';
-    if (isAdmin) {
-        el.classList.remove('hidden');
-        el.textContent = 'Режим руководства: после входа по паролю дашборда вы можете менять статус, срок и комментарий по заявкам.';
-    } else {
-        el.classList.add('hidden');
-    }
-}
-
-function buildDetourEmployeeList() {
     const map = new Map();
     const keyOf = (inn, phone, name) => `${String(inn || '').trim()}|${normalizePhone(phone)}|${String(name || '').toLowerCase()}`;
     (allPayments || []).forEach(p => {
@@ -1282,7 +1266,6 @@ function renderDetoursTable() {
     const tbody = document.getElementById('detours-table-body');
     const filterEl = document.getElementById('detours-status-filter');
     if (!tbody) return;
-    const isAdmin = sessionStorage.getItem('dashboardAccessGranted') === 'true';
 
     if (filterEl && filterEl.options.length <= 1 && CONFIG.detourStatuses) {
         CONFIG.detourStatuses.forEach(st => {
@@ -1302,13 +1285,9 @@ function renderDetoursTable() {
 
     if (rows.length === 0) {
         tbody.innerHTML =
-            '<tr><td colspan="9" style="text-align:center;padding:2rem;color:var(--gray-600);">Нет заявок по фильтру. Создайте новую через кнопку выше.</td></tr>';
+            '<tr><td colspan="8" style="text-align:center;padding:2rem;color:var(--gray-600);">Нет заявок по фильтру. Создайте новую через кнопку выше.</td></tr>';
         return;
     }
-
-    const statusOpts = (CONFIG.detourStatuses || [])
-        .map(s => `<option value="${escapeHtmlDetour(s)}">${escapeHtmlDetour(s)}</option>`)
-        .join('');
 
     const html = rows
         .map(d => {
@@ -1317,28 +1296,11 @@ function renderDetoursTable() {
             const reason = d.paperReason || '';
             const shortReason =
                 reason.length > 100 ? escapeHtmlDetour(reason.slice(0, 100) + '…') : escapeHtmlDetour(reason);
-            const admDate = toDateInputValueFlexible(d.adminDeadline);
             const innRaw = String(d.employeeInn || '').trim();
             const nameEsc = escapeHtmlDetour(d.employeeName || '');
             const empCell = innRaw
                 ? `<a href="#" class="employee-link" data-inn="${escapeHtmlDetour(innRaw)}">${nameEsc}</a>`
                 : nameEsc;
-
-            let adminCell = '';
-            if (isAdmin) {
-                adminCell = `<td class="detour-admin-cell">
-          <select class="detour-admin-status" data-detour-id="${id}">${statusOpts}</select>
-          <input type="date" class="detour-admin-deadline" data-detour-id="${id}" value="${escapeHtmlDetour(admDate)}" />
-          <textarea class="detour-admin-comment" data-detour-id="${id}" placeholder="Комментарий руководства">${escapeHtmlDetour(
-                    d.adminComment || ''
-                )}</textarea>
-          <button type="button" class="btn btn-small btn-primary detour-admin-save" data-detour-id="${id}">Сохранить</button>
-        </td>`;
-            } else {
-                adminCell = `<td><small>${formatDateRussian(d.adminDeadline || '') || escapeHtmlDetour(d.adminDeadline || '—')}</small><br><small>${escapeHtmlDetour(
-                    d.adminComment || ''
-                )}</small></td>`;
-            }
 
             return `<tr>
         <td><code>${id}</code></td>
@@ -1349,7 +1311,6 @@ function renderDetoursTable() {
         <td title="${escapeHtmlDetour(reason)}">${shortReason}</td>
         <td><span class="status-badge status-badge-neutral">${escapeHtmlDetour(d.status || '')}</span></td>
         <td>${escapeHtmlDetour(formatDateRussian(d.contractDeliveryDate || '') || d.contractDeliveryDate || '')}</td>
-        ${adminCell}
       </tr>`;
         })
         .join('');
@@ -1363,40 +1324,4 @@ function renderDetoursTable() {
             if (inn) showEmployeeDetailsByINN(inn);
         });
     });
-
-    if (isAdmin) {
-        rows.forEach(d => {
-            const id = String(d.id || '');
-            if (!id || !d.status) return;
-            tbody.querySelectorAll('.detour-admin-status').forEach(sel => {
-                if (sel.getAttribute('data-detour-id') === id) {
-                    sel.value = d.status;
-                }
-            });
-        });
-
-        tbody.querySelectorAll('.detour-admin-save').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const did = btn.getAttribute('data-detour-id');
-                const st = tbody.querySelector(`.detour-admin-status[data-detour-id="${did}"]`);
-                const dl = tbody.querySelector(`.detour-admin-deadline[data-detour-id="${did}"]`);
-                const cm = tbody.querySelector(`.detour-admin-comment[data-detour-id="${did}"]`);
-                btn.disabled = true;
-                try {
-                    await updateDetourRequestApi({
-                        id: did,
-                        status: st ? st.value : '',
-                        adminDeadline: dl ? dl.value : '',
-                        adminComment: cm ? cm.value : ''
-                    });
-                    await loadData();
-                } catch (err) {
-                    console.error(err);
-                    alert(err.message || 'Не удалось сохранить');
-                } finally {
-                    btn.disabled = false;
-                }
-            });
-        });
-    }
 }
